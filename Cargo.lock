@@ -21,9 +21,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9555578bc9e57714c812a1f84e4fc5b4d21fcb063490c624de019f7464c91268"
 
 [[package]]
+name = "library"
+version = "0.1.0"
+
+[[package]]
 name = "loader"
 version = "0.1.0"
 dependencies = [
+ "library",
  "uefi",
 ]
 
@@ -70,6 +75,10 @@ checksum = "1885c039570dc00dcb4ff087a89e185fd56bae234ddc7f056a945bf36467248d"
 dependencies = [
  "proc-macro2",
 ]
+
+[[package]]
+name = "scripts"
+version = "0.1.0"
 
 [[package]]
 name = "syn"

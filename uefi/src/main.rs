@@ -8,8 +8,6 @@ use uefi::prelude::*;
 #[entry]
 fn main() -> Status {
     uefi::helpers::init().unwrap();
-    for i in 0..100000 {
-        print!("{i} ");
-    }
+    println!("Welcome to use Proka Bootloader!");
     Status::SUCCESS
 }
