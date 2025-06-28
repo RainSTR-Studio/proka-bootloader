@@ -1,0 +1,11 @@
+[workspace]
+members = ["uefi"]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+repository = "https://github.com/RainSTR-Studio/proka-bootloader"
+authors = ["RainSTR Studio"]
+
+[workspace.dependencies]
+uefi = { version = "0.35.0", features = ["global_allocator", "alloc", "panic_handler"] }

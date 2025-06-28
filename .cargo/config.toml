@@ -1,0 +1,6 @@
+[build]
+target = "x86_64-unknown-uefi"
+
+[target.'cfg(target_os = "uefi")']
+runner = "uefi-run"
+
