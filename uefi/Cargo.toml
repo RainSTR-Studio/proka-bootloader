@@ -6,5 +6,5 @@ repository.workspace = true
 authors.workspace = true
 
 [dependencies]
-uefi = { workspace = true }
+uefi = { version = "0.35.0", features = ["global_allocator", "alloc", "panic_handler"] }
 library = { path = "../library" }
