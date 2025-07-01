@@ -21,14 +21,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9555578bc9e57714c812a1f84e4fc5b4d21fcb063490c624de019f7464c91268"
 
 [[package]]
-name = "library"
-version = "0.1.0"
-
-[[package]]
 name = "loader"
 version = "0.1.0"
 dependencies = [
- "library",
+ "proka_bootloader",
  "uefi",
 ]
 
@@ -46,6 +42,10 @@ checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
 dependencies = [
  "unicode-ident",
 ]
+
+[[package]]
+name = "proka_bootloader"
+version = "0.1.0"
 
 [[package]]
 name = "ptr_meta"

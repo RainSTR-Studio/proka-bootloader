@@ -3,7 +3,7 @@
 
 #[macro_use]
 extern crate uefi;
-use library::boot::*;
+use proka_bootloader::boot::*;
 use uefi::prelude::*;
 
 #[used]
@@ -16,6 +16,7 @@ fn main() -> Status {
     println!("Welcome to use Proka Bootloader!");
     let boot_info = BootInfo::new(BootMode::Uefi);
     unsafe {
+        // Put to an address
         BOOT_INFO = Some(boot_info);
         BOOT_INFO.unwrap().put_addr(0x1000);
     }
