@@ -6,3 +6,4 @@ repository.workspace = true
 authors.workspace = true
 
 [dependencies]
+uefi = "0.35.0"

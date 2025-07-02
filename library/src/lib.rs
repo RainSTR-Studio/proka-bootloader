@@ -6,4 +6,12 @@
 //! its standard. For more information, see <url>.
 
 #![no_std]
+#![no_main]
 pub mod boot;
+pub mod io;
+
+/// The public loader main function.
+#[unsafe(no_mangle)]
+pub extern "C" fn loader_main() {
+    println!("Hello world!")
+}

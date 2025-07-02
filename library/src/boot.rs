@@ -3,7 +3,7 @@
 /// This struct is the boot information struct, which provides
 /// the basic information, *memory map*, and so on.
 #[repr(C, align(4))]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BootInfo {
     /// The boot mode, see the [`BootMode`] enum.
     boot_mode: BootMode,
@@ -46,7 +46,8 @@ impl BootInfo {
 }
 
 /// This is the boot mode, only support 2 modes, which are legacy(BIOS) and UEFI.
-#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BootMode {
     /// The Legacy boot mode, also called BIOS boot mode.
     ///

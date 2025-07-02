@@ -46,6 +46,9 @@ dependencies = [
 [[package]]
 name = "proka_bootloader"
 version = "0.1.0"
+dependencies = [
+ "uefi",
+]
 
 [[package]]
 name = "ptr_meta"
