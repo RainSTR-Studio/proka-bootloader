@@ -7,4 +7,4 @@ authors.workspace = true
 
 [dependencies]
 uefi = { version = "0.35.0", features = ["global_allocator", "alloc", "panic_handler"] }
-proka_bootloader = { path = "../library" }
+proka_bootloader = { path = "../library", features = ["loader_main"] }

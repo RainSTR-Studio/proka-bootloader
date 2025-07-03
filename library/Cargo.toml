@@ -7,3 +7,7 @@ authors.workspace = true
 
 [dependencies]
 uefi = "0.35.0"
+
+[features]
+default = []
+loader_main = []
