@@ -21,8 +21,7 @@ build-subdirs:
 $(OUTPUT_DIR)/hd.img:
 	dd if=/dev/zero of=$@ bs=1M count=1 status=none
 	cat $(OUTPUT_DIR)/mbr.bin \
-	    $(OUTPUT_DIR)/boot.bin \
-	    $(OUTPUT_DIR)/fat32.bin > $@
+	    $(OUTPUT_DIR)/boot.bin > $@
 
 # Run QEMU
 run: $(OUTPUT_DIR)/hd.img

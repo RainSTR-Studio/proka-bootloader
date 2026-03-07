@@ -4,21 +4,6 @@
 ; This file is the minimal driver of FAT32, which will read the kernel
 ; file from FAT32 partition.
 
-[bits 16]
-
-; ------------------------------
-; Global variables
-; ------------------------------
-fat32_BytesPerSector     dw 512
-fat32_SectorsPerCluster  db 0
-fat32_ReservedSectors    dd 0
-fat32_FatCount           db 0
-fat32_SectorsPerFat      dd 0
-fat32_RootClusterHi      dw 0 ; High part
-fat32_RootClusterLo      dw 0 ; Low part
-fat32_DataRegionSector   dd 0
-fat32_DriveNum           db 0x80 ; The first drive
-
 ; ------------------------------
 ; fat32_init
 ; Inputs:
@@ -78,6 +63,7 @@ fat32_init:
 
     ret
 .error:
+    stc
     ret
 
 ; ------------------------------
@@ -167,7 +153,6 @@ fat32_next_cluster:
     mov ah, 0x02
     mov al, 1
     mov ch, 0
-    mov cl, cl
     mov dh, 0
     mov bx, 0x7e00
     mov dl, [fat32_DriveNum]
@@ -271,9 +256,18 @@ fat32_read_file:
 
     ; Check if end of cluster chain
     call fat32_next_cluster
-    cmp ax, 0x0FFFFFFF
-    jb .read_loop
+    cmp ax, 0xFFF8
+    jae .end_chain
 
+    ; Continue reading
+    add bx, [fat32_BytesPerSector]
+    movzx cx, byte [fat32_SectorsPerCluster]
+    shl cx, 9            ; *512
+    sub dx, cx
+    sbb cx, 0
+    jnc .read_loop
+
+.end_chain:
     pop dx
     pop cx
     pop bx
