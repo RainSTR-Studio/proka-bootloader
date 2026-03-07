@@ -9,10 +9,3 @@
 #![no_main]
 pub mod boot;
 pub mod io;
-
-/// The public loader main function.
-#[cfg(feature = "loader_main")]
-#[unsafe(no_mangle)]
-pub extern "C" fn loader_main() {
-    println!("Hello world!")
-}

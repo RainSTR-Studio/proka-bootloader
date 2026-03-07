@@ -1,9 +1,0 @@
-[workspace]
-members = ["uefi", "library", "scripts"]
-resolver = "2"
-
-[workspace.package]
-edition = "2024"
-repository = "https://github.com/RainSTR-Studio/proka-bootloader"
-authors = ["RainSTR Studio"]
-
