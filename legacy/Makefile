@@ -4,14 +4,11 @@
 # Builds all boot components and creates a plain concatenated disk image.
 # No linking, no ELF, just raw binary concatenation.
 
-OUTPUT_DIR := $(CURDIR)/output
-export OUTPUT_DIR
-
 SUBDIRS := boot drivers
 
 # Default target
 all: build-subdirs $(OUTPUT_DIR)/hd.img
-	@echo "Build complete: $(OUTPUT_DIR)/hd.img"
+	@echo "[INFO] Build complete: $(OUTPUT_DIR)/hd.img"
 
 # Build all subdirectories
 build-subdirs:
@@ -37,6 +34,6 @@ clean:
 		$(MAKE) -C $$dir clean; \
 	done
 	rm -rf $(OUTPUT_DIR)
-	@echo "Clean complete"
+	@echo "[INFO] Clean complete"
 
 .PHONY: all build-subdirs run clean

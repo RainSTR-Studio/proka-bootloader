@@ -1,3 +1,5 @@
 # Ignore the build directories
 # Add by cargo
 /target
+
+output/*
