@@ -6,13 +6,6 @@
 
 [bits 16]
 
-global fat32_init
-global fat32_cluster_to_sector
-global fat32_read_cluster
-global fat32_next_cluster
-global fat32_find_file
-global fat32_read_file
-
 ; ------------------------------
 ; Global variables
 ; ------------------------------
@@ -287,3 +280,15 @@ fat32_read_file:
     pop ax
     ret
 
+; ------------------------------
+; Global variables
+; ------------------------------
+fat32_BytesPerSector     dw 512
+fat32_SectorsPerCluster  db 0
+fat32_ReservedSectors    dd 0
+fat32_FatCount           db 0
+fat32_SectorsPerFat      dd 0
+fat32_RootClusterHi      dw 0 ; High part
+fat32_RootClusterLo      dw 0 ; Low part
+fat32_DataRegionSector   dd 0
+fat32_DriveNum           db 0x80 ; The first drive
