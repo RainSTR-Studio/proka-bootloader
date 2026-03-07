@@ -8,11 +8,11 @@
 [bits 16]	; Real mode still
 
 start:
-	; Entered stage 2
+  ; Entered stage 2
   mov si, msg_enter_sg2
   call print
   hlt
-	
+  
 
 print:
   mov ah, 0x0e
