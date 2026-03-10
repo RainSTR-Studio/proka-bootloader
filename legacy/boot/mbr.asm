@@ -9,7 +9,7 @@
 [org 0x7c00]	; MBR code at 0x7c00
 [bits 16]	; Real mode code
 
-; Stage 0 -> Stage 1: Set up MBR
+; Stage 0: Set up MBR
 boot:
 	cli		; Disable interrupt
 	
@@ -35,6 +35,10 @@ boot:
   mov dh, 0 
   mov dl, 0 
   int 0x10
+
+  ; Print welcome message
+  mov si, msg_loaded_mbr
+  call print
 	
 	; Enable A20
 	in al, 0x92	; Read from A20 port
@@ -51,9 +55,8 @@ boot:
 	mov bx, 0x8000	; Target address
 	int 0x13	; Let's gooo!
 	
-	; Stage 1 -> Stage 2
   ; Output a message
-  mov si, msg_stg2
+  mov si, msg_stg1
   call print
 
   ; Check is read succeed
@@ -85,8 +88,9 @@ hang:
   hlt
 	jmp hang
 
-msg_stg2 db "Proka Bootloader: Preparing for stage1 -> stage2...",0x0d,0x0a,0
-msg_disk_err db "Proka Bootloader: Cannot read stage2 data!",0x0d,0x0a,0
+msg_stg1 db "[INFO] Preparing for stage0 -> stage1...",0x0d,0x0a,0
+msg_disk_err db "[ERROR] Cannot read stage1 data!",0x0d,0x0a,0
+msg_loaded_mbr db "Welcome to Proka Bootloader!",0x0d,0x0a,0
 
 ; Add MBR sign
 times 510 - ($ - $$) db 0

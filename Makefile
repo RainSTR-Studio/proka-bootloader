@@ -5,10 +5,13 @@ export OUTPUT_DIR
 all: legacy uefi
 	@echo "[INFO] All platforms' bootloader file are built successfully!"
 
-legacy:
+legacy: clean
 	make -C legacy OUTPUT_DIR=$(OUTPUT_DIR)
 
 uefi:
 	make -C uefi
 
-.PHONY: all legacy uefi
+clean:
+	rm -rf $(OUTPUT_DIR)
+
+.PHONY: all legacy uefi clean

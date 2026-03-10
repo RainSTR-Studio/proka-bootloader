@@ -8,10 +8,10 @@ NASM := nasm
 OUTPUT_DIR ?= output
 
 MBR_SRC := mbr.asm
-BOOT_SRC := boot.asm
+BOOT_SRC := stg1.asm
 
 MBR_BIN := $(OUTPUT_DIR)/mbr.bin
-BOOT_BIN := $(OUTPUT_DIR)/boot.bin
+BOOT_BIN := $(OUTPUT_DIR)/stg1.bin
 
 all: prepare $(MBR_BIN) $(BOOT_BIN)
 
