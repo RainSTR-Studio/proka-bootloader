@@ -23,27 +23,40 @@ init_dpt:
 .load_dpt:
   ; The default DPT partition is at 0x1BE in the partition
   ; However, the MBR is loaded at 0x7c00, so that we won't read it again
-  ; So 0x7c00 + 0x1BE = 0x7DBE, just read it from there.
-  mov ax, [bx]
-  mov [boot_flag], ax
-  mov ax, [bx + 1]
-  mov [start_head], ax
-  mov ax, [bx + 2]
-  mov [start_sector], ax
-  mov ax, [bx + 3]
-  mov [start_cyl], ax
-  mov ax, [bx + 4]
-  mov [type], ax
-  mov ax, [bx + 5]
-  mov [end_head], ax
-  mov ax, [bx + 6]
-  mov [end_sector], ax
-  mov ax, [bx + 7]
-  mov [end_cyl], ax
-  mov ax, [bx + 8] ; 4 Bytes!
+  ; So 0x7c00 + 0x1BE = 0x7DBE, just read from there.
+  mov al, [bx]
+  mov [boot_flag], al
+
+  mov al, [bx + 1]
+  mov [start_head], al
+
+  mov al, [bx + 2]
+  mov [start_sector], al
+  mov al, [bx + 3]
+  mov [start_cyl], al
+
+  mov al, [bx + 4]
+  mov [type], al
+
+  mov al, [bx + 5]
+  mov [end_head], al
+
+  mov al, [bx + 6]
+  mov [end_sector], al
+  mov al, [bx + 7]
+  mov [end_cyl], al
+
+  ; Start LBA (4 bytes)
+  mov ax, [bx + 8]
+  mov dx, [bx + 10]
   mov [start_lba], ax
-  mov ax, [bx + 12] ; 4 Bytes!
+  mov [start_lba + 2], dx
+
+  ; Total sectors (4 bytes)
+  mov ax, [bx + 12]
+  mov dx, [bx + 14]
   mov [total_sectors], ax
+  mov [total_sectors + 2], dx
 
 ; Check is the current table is proka os's partition
 .check_is_proka_part:
@@ -52,22 +65,33 @@ init_dpt:
   ; - Type is 0x91
 
   ; Check is the current part table has bootable flag.
-  mov ax, [boot_flag]
-  cmp ax, 0x80 ; Bootable flag is 0x80
-  jne .skip
+  cmp byte [boot_flag], 0x80
+  jne .next_part
 
-.skip:
-  cmp cx, 4 ; Only 4 DPTs
+  cmp byte [type], 0x91
+  je .found_part
+
+.next_part:
+  cmp cx, 4
   je .not_found
 
-  shl bx, 4 ; Each DPT size is 16B
-  add cx, 1
-  jmp init_dpt
+  add bx, 16
+  inc cx
+  jmp .load_dpt
+
+.found_part:
+  jmp boot_main
 
 .not_found:
   mov si, msg_part_not_found
   call print
   hlt
+
+boot_main:
+  mov si, msg_part_found
+  call print
+  hlt
+
   
 print:
   mov ah, 0x0e
@@ -98,6 +122,7 @@ total_sectors dd 0
 ; Messages
 msg_enter_sg1 db "[INFO] Entered stage1",0x0d,0x0a,0
 msg_finding_part db "[INFO] Finding and parsing DPT...",0x0d,0x0a,0
-msg_part_not_found db "[ERROR] No proka partition found, gotta hang...",0x0d,0x0a,0
+msg_part_not_found db "[ERROR] No proka partition found, gotta hang...",0x0d,0x0a,0 
+msg_part_found db "[INFO] Proka partition found!",0x0d,0x0a,0
 
 times 16*512 - ($ - $$) db 0
