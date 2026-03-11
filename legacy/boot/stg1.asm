@@ -109,14 +109,14 @@ init_dpt:
   call print
   mov al, 1 
   mov [is_windows_part_found], al
-  jmp print_result
+  jmp boot_main
 
 .not_found:
   cmp byte [is_proka_part_found], 0
-  jne print_result
+  jne boot_main
 
   cmp byte [is_windows_part_found], 0
-  jne print_result
+  jne boot_main
 
   jmp .all_not_found
 
@@ -124,34 +124,6 @@ init_dpt:
   mov si, msg_part_not_found
   call print
   hlt
-
-print_result:
-  mov si, msg_parse_dpt_result
-  call print
-
-.cmp_proka:
-  mov al, [is_proka_part_found]
-  cmp al, 1
-  je .found_proka
-
-.cmp_windows:
-  mov al, [is_windows_part_found]
-  cmp al, 1
-  je .found_windows
-  jmp boot_main
-
-.found_proka:
-  mov si, msg_proka
-  call print
-  mov ah, 0x0e
-  mov al, ','
-  int 0x10
-  jmp .cmp_windows
-
-.found_windows:
-  mov si, msg_windows
-  call print
-  jmp boot_main
 
 boot_main:
   hlt
@@ -193,8 +165,5 @@ msg_finding_part db "[INFO] Finding and parsing DPT...",0x0d,0x0a,0
 msg_part_not_found db "[ERROR] No known partition found, gotta hang...",0x0d,0x0a,0 
 msg_proka_part_found db "[INFO] Proka partition found! continuing finding Windows part...",0x0d,0x0a,0
 msg_windows_part_found db "[INFO] Found Windows partition!",0x0d,0x0a,0
-msg_parse_dpt_result db "[INFO] Found these partitions: ",0
-msg_proka db "Proka",0
-msg_windows db "Windows",0
 
 times 16*512 - ($ - $$) db 0
