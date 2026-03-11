@@ -144,9 +144,79 @@ boot_main:
   mov si, msg_find_part_complete
   call print
   
+  ; Print tip message
   mov si, msg_ask_os
   call print
+  
+  ; Init menu count
+  mov byte [menu_item_count], 0
 
+.is_show_proka:
+  cmp byte [is_proka_part_found], 1
+  jne .is_show_windows
+  inc byte [menu_item_count]
+  mov byte [proka_menu_index], 1
+  mov si, msg_proka
+  call print
+
+.is_show_windows:
+  cmp byte [is_windows_part_found], 1
+  jne .choose
+  inc byte [menu_item_count]
+  mov al, [menu_item_count]
+  mov byte [win_menu_index], al
+  mov si, msg_windows
+  call print
+
+.choose:
+  mov si, msg_choose
+  call print
+  jmp wait_input
+
+; Wait for user input
+wait_input:
+  mov ah, 0x00
+  int 0x16
+
+  cmp al, 0x0D
+  je .do_jmp
+
+  cmp al, '1'
+  jb wait_input
+
+  cmp al, '2'
+  ja wait_input
+
+  mov ah, 0x0E
+  int 0x10
+
+  mov al, 0x08   ; Back one 
+  int 0x10
+
+  mov [input_buf], al
+
+  jmp wait_input
+
+.do_jmp:
+  mov al, [input_buf]
+
+  cmp al, [proka_menu_index]
+  je boot_proka
+
+  cmp al, [win_menu_index]
+  je boot_windows
+
+  mov ah, 0x0E
+  mov al, 0x07
+  int 0x10
+
+  jmp wait_input
+
+
+boot_proka:
+  hlt
+
+boot_windows:
   hlt
   
 print:
@@ -190,6 +260,12 @@ proka_total_sectors dd 0
 windows_start_lba dd 0
 windows_total_sectors dd 0
 
+; Menu data
+menu_item_count db 0    ; How many choices (1 or 2)
+proka_menu_index db 0   ; Which one is proka
+win_menu_index db 0     ; Which ome is Windows
+input_buf db 0          ; Input data
+
 ; Messages
 msg_enter_sg1 db "[STAGE] Entered stage1",0x0d,0x0a,0
 msg_finding_part db "[INFO] Finding and parsing DPT...",0x0d,0x0a,0
@@ -198,5 +274,8 @@ msg_proka_part_found db "[INFO] Found Proka partition!",0x0d,0x0a,0
 msg_windows_part_found db "[INFO] Found Windows partition!",0x0d,0x0a,0
 msg_find_part_complete db "[INFO] Parsing DPT has been completed",0x0d,0x0a,0
 msg_ask_os db "Please select an OS that you want to boot:",0x0d,0x0a,0
+msg_proka db " - ProkaOS ",0x0d,0x0a,0
+msg_windows db " - Windows ",0x0d,0x0a,0
+msg_choose db "Enter your choice (1/2) : ",0
 
 times 16*512 - ($ - $$) db 0
