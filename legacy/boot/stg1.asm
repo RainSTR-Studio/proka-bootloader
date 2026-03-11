@@ -4,8 +4,8 @@
 ; This file is the stage 2 of the whole boot process, which
 ; will initialize more things, such as VBE, disk and so on.
 
-[org 0x8000]	; The jumped target
-[bits 16]	; Real mode still
+[org 0x8000]  ; The jumped target
+[bits 16]     ; Real mode still
 
 start:
   ; Entered stage 1
@@ -15,7 +15,6 @@ start:
   mov si, msg_finding_part
   call print
 
-init_dpt:
   mov bx, 0x7DBE
   mov cx, 0
 
@@ -58,34 +57,24 @@ init_dpt:
   mov [total_sectors], ax
   mov [total_sectors + 2], dx
 
-.decide_detect_what:
-  mov al, [is_proka_part_found]
-  cmp al, 1
-  je .check_is_windows_part
-
-; Check is the current table is proka os's partition
 .check_is_proka_part:
   ; The Proka OS's partition satisfy these conditions:
   ; - Has bootable flag
   ; - Type is 0x91
-
-  ; Check is the current part table has bootable flag.
   cmp byte [boot_flag], 0x80
-  jne .next_part
+  jne .check_is_windows_part
 
   cmp byte [type], 0x91
+  jne .check_is_windows_part
   je .found_proka_part
 
 .check_is_windows_part:
   ; The Windows partition must satisfy these:
   ; - Has bootable flag
   ; - Type is 0x07 (HPFS/NTFS/exFAT)
-
-  ; Check is bootable flag
   cmp byte [boot_flag], 0x80
   jne .next_part
 
-  ; Check is Windows part
   cmp byte [type], 0x07
   je .found_windows_part
 
@@ -100,9 +89,7 @@ init_dpt:
 .found_proka_part:
   mov si, msg_proka_part_found
   call print
-  ; Set is_proka to 1 (true)
-  mov al, 1
-  mov [is_proka_part_found], al
+  mov byte [is_proka_part_found], 1
 
   ; Save start LBA
   mov ax, [start_lba]
@@ -115,15 +102,15 @@ init_dpt:
   mov dx, [total_sectors + 2]
   mov [proka_total_sectors], ax
   mov [proka_total_sectors + 2], dx
-  jmp init_dpt
+
+  jmp .next_part
 
 .found_windows_part:
   mov si, msg_windows_part_found
   call print
   
   ; Set is_windows to 1 (true)
-  mov al, 1 
-  mov [is_windows_part_found], al
+  mov byte [is_windows_part_found], 1
 
   ; Save start LBA
   mov ax, [start_lba]
@@ -137,7 +124,7 @@ init_dpt:
   mov [windows_total_sectors], ax
   mov [windows_total_sectors + 2], dx
 
-  jmp boot_main
+  jmp .next_part
 
 .not_found:
   cmp byte [is_proka_part_found], 0
@@ -157,23 +144,26 @@ boot_main:
   mov si, msg_find_part_complete
   call print
 
-  mov si, msg_ask_os
-  call print
-
   hlt
   
 print:
+  push ax
   mov ah, 0x0e
 
 .next:
-  lodsb
+  mov al, [si]
   cmp al, 0 
   je .done
+
   int 0x10
+  inc si
   jmp .next
 
 .done:
+  pop ax
   ret
+
+; times 256 db 0
 
 ; Data sections
 ; DPT structures
@@ -203,9 +193,8 @@ windows_total_sectors dd 0
 msg_enter_sg1 db "[STAGE] Entered stage1",0x0d,0x0a,0
 msg_finding_part db "[INFO] Finding and parsing DPT...",0x0d,0x0a,0
 msg_part_not_found db "[ERROR] No known partition found, gotta hang...",0x0d,0x0a,0 
-msg_proka_part_found db "[INFO] Proka partition found! continuing finding Windows part...",0x0d,0x0a,0
+msg_proka_part_found db "[INFO] Found Proka partition!",0x0d,0x0a,0
 msg_windows_part_found db "[INFO] Found Windows partition!",0x0d,0x0a,0
 msg_find_part_complete db "[INFO] Parsing DPT has been completed",0x0d,0x0a,0
-msg_ask_os db "Please choose the OS you want to boot:",0x0d,0x0a,0
 
 times 16*512 - ($ - $$) db 0
