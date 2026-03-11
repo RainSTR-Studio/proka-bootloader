@@ -58,6 +58,11 @@ init_dpt:
   mov [total_sectors], ax
   mov [total_sectors + 2], dx
 
+.decide_detect_what:
+  mov al, [is_proka_part_found]
+  cmp al, 1
+  je .check_is_windows_part
+
 ; Check is the current table is proka os's partition
 .check_is_proka_part:
   ; The Proka OS's partition satisfy these conditions:
@@ -69,7 +74,20 @@ init_dpt:
   jne .next_part
 
   cmp byte [type], 0x91
-  je .found_part
+  je .found_proka_part
+
+.check_is_windows_part:
+  ; The Windows partition must satisfy these:
+  ; - Has bootable flag
+  ; - Type is 0x07 (HPFS/NTFS/exFAT)
+
+  ; Check is bootable flag
+  cmp byte [boot_flag], 0x80
+  jne .next_part
+
+  ; Check is Windows part
+  cmp byte [type], 0x07
+  je .found_windows_part
 
 .next_part:
   cmp cx, 4
@@ -79,19 +97,52 @@ init_dpt:
   inc cx
   jmp .load_dpt
 
-.found_part:
-  jmp boot_main
+.found_proka_part:
+  mov si, msg_proka_part_found
+  call print
+  mov al, 1
+  mov [is_proka_part_found], al
+  jmp init_dpt
+
+.found_windows_part:
+  mov si, msg_windows_part_found
+  call print
+  jmp print_result
 
 .not_found:
   mov si, msg_part_not_found
   call print
   hlt
 
-boot_main:
-  mov si, msg_part_found
+print_result:
+  mov si, msg_parse_dpt_result
   call print
-  hlt
 
+.cmp_proka:
+  mov al, [is_proka_part_found]
+  cmp al, 1
+  je .found_proka
+
+.cmp_windows:
+  mov al, [is_windows_part_found]
+  cmp al, 1
+  je .found_windows
+
+.found_proka:
+  mov si, msg_proka
+  call print
+  mov ah, 0x0e
+  mov al, ','
+  int 0x10
+  jmp .cmp_windows
+
+.found_windows:
+  mov si, msg_windows
+  call print
+  jmp boot_main
+
+boot_main:
+  hlt
   
 print:
   mov ah, 0x0e
@@ -119,10 +170,19 @@ end_cyl db 0
 start_lba dd 0
 total_sectors dd 0
 
+; Bool data
+; If the current data is one, it's true.
+is_proka_part_found db 0
+is_windows_part_found db 0
+
 ; Messages
 msg_enter_sg1 db "[INFO] Entered stage1",0x0d,0x0a,0
 msg_finding_part db "[INFO] Finding and parsing DPT...",0x0d,0x0a,0
 msg_part_not_found db "[ERROR] No proka partition found, gotta hang...",0x0d,0x0a,0 
-msg_part_found db "[INFO] Proka partition found!",0x0d,0x0a,0
+msg_proka_part_found db "[INFO] Proka partition found! continuing finding Windows part...",0x0d,0x0a,0
+msg_windows_part_found db "[INFO] Found Windows partition!",0x0d,0x0a,0
+msg_parse_dpt_result db "[INFO] Found these partitions: ",0
+msg_proka db "Proka ",0
+msg_windows db "Windows",0
 
 times 16*512 - ($ - $$) db 0
