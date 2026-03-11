@@ -88,7 +88,7 @@ hang:
   hlt
 	jmp hang
 
-msg_stg1 db "[INFO] Preparing for stage0 -> stage1...",0x0d,0x0a,0
+msg_stg1 db "[STAGE] Preparing for stage0 -> stage1...",0x0d,0x0a,0
 msg_disk_err db "[ERROR] Cannot read stage1 data!",0x0d,0x0a,0
 msg_loaded_mbr db "Welcome to Proka Bootloader!",0x0d,0x0a,0
 

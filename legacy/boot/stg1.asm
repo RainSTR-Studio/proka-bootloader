@@ -100,15 +100,43 @@ init_dpt:
 .found_proka_part:
   mov si, msg_proka_part_found
   call print
+  ; Set is_proka to 1 (true)
   mov al, 1
   mov [is_proka_part_found], al
+
+  ; Save start LBA
+  mov ax, [start_lba]
+  mov dx, [start_lba + 2]
+  mov [proka_start_lba], ax
+  mov [proka_start_lba + 2], dx
+
+  ; Save total sectors
+  mov ax, [total_sectors]
+  mov dx, [total_sectors + 2]
+  mov [proka_total_sectors], ax
+  mov [proka_total_sectors + 2], dx
   jmp init_dpt
 
 .found_windows_part:
   mov si, msg_windows_part_found
   call print
+  
+  ; Set is_windows to 1 (true)
   mov al, 1 
   mov [is_windows_part_found], al
+
+  ; Save start LBA
+  mov ax, [start_lba]
+  mov dx, [start_lba + 2]
+  mov [windows_start_lba], ax
+  mov [windows_start_lba + 2], dx
+
+  ; Save total sectors
+  mov ax, [total_sectors]
+  mov dx, [total_sectors + 2]
+  mov [windows_total_sectors], ax
+  mov [windows_total_sectors + 2], dx
+
   jmp boot_main
 
 .not_found:
@@ -126,6 +154,12 @@ init_dpt:
   hlt
 
 boot_main:
+  mov si, msg_find_part_complete
+  call print
+
+  mov si, msg_ask_os
+  call print
+
   hlt
   
 print:
@@ -159,11 +193,19 @@ total_sectors dd 0
 is_proka_part_found db 0
 is_windows_part_found db 0
 
+; Essential data
+proka_start_lba dd 0
+proka_total_sectors dd 0
+windows_start_lba dd 0
+windows_total_sectors dd 0
+
 ; Messages
-msg_enter_sg1 db "[INFO] Entered stage1",0x0d,0x0a,0
+msg_enter_sg1 db "[STAGE] Entered stage1",0x0d,0x0a,0
 msg_finding_part db "[INFO] Finding and parsing DPT...",0x0d,0x0a,0
 msg_part_not_found db "[ERROR] No known partition found, gotta hang...",0x0d,0x0a,0 
 msg_proka_part_found db "[INFO] Proka partition found! continuing finding Windows part...",0x0d,0x0a,0
 msg_windows_part_found db "[INFO] Found Windows partition!",0x0d,0x0a,0
+msg_find_part_complete db "[INFO] Parsing DPT has been completed",0x0d,0x0a,0
+msg_ask_os db "Please choose the OS you want to boot:",0x0d,0x0a,0
 
 times 16*512 - ($ - $$) db 0
