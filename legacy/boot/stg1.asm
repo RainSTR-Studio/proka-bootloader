@@ -107,6 +107,8 @@ init_dpt:
 .found_windows_part:
   mov si, msg_windows_part_found
   call print
+  mov al, 1 
+  mov [is_windows_part_found], al
   jmp print_result
 
 .not_found:
@@ -118,7 +120,7 @@ init_dpt:
 
   jmp .all_not_found
 
-  .all_not_found:
+.all_not_found:
   mov si, msg_part_not_found
   call print
   hlt
