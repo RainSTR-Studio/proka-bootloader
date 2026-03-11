@@ -143,6 +143,9 @@ start:
 boot_main:
   mov si, msg_find_part_complete
   call print
+  
+  mov si, msg_ask_os
+  call print
 
   hlt
   
@@ -162,8 +165,6 @@ print:
 .done:
   pop ax
   ret
-
-; times 256 db 0
 
 ; Data sections
 ; DPT structures
@@ -196,5 +197,6 @@ msg_part_not_found db "[ERROR] No known partition found, gotta hang...",0x0d,0x0
 msg_proka_part_found db "[INFO] Found Proka partition!",0x0d,0x0a,0
 msg_windows_part_found db "[INFO] Found Windows partition!",0x0d,0x0a,0
 msg_find_part_complete db "[INFO] Parsing DPT has been completed",0x0d,0x0a,0
+msg_ask_os db "Please select an OS that you want to boot:",0x0d,0x0a,0
 
 times 16*512 - ($ - $$) db 0

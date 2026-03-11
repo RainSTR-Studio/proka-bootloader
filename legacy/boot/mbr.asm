@@ -11,16 +11,16 @@
 
 ; Stage 0: Set up MBR
 boot:
-	cli		; Disable interrupt
-	
-	; Clear all Segment
-	xor ax, ax	; Set AX as 0
-	mov ds, ax	; Clear DS
-	mov es, ax	; Clear ES
-	mov ss, ax	; Clear SS
-	
-	; Set up stack
-	mov sp, 0x7c00	; Set stack pointer as 0x7c00
+  cli		; Disable interrupt
+  
+  ; Clear all Segment
+  xor ax, ax	; Set AX as 0
+  mov ds, ax	; Clear DS
+  mov es, ax	; Clear ES
+  mov ss, ax	; Clear SS
+  
+  ; Set up stack
+  mov sp, 0x7c00	; Set stack pointer as 0x7c00
 
   ; Clear screen
   mov ax, 0x0600
@@ -40,20 +40,20 @@ boot:
   mov si, msg_loaded_mbr
   call print
 	
-	; Enable A20
-	in al, 0x92	; Read from A20 port
-	or al, 2	; Set as 1
-	out 0x92, al	; Send port
+  ; Enable A20
+  in al, 0x92	; Read from A20 port
+  or al, 2	; Set as 1
+  out 0x92, al	; Send port
 	
-	; Prepare for Stage 2
-	; Read the stage 2 code to 0x8000
-	mov ah, 0x2	; Read disk
-	mov al, 1	; 16 sectors
-	mov ch, 0	; Read from cylinder 0
-	mov cl, 2	; Start read from sector 2
-	mov dl, 0x80	; Disk head number
-	mov bx, 0x8000	; Target address
-	int 0x13	; Let's gooo!
+  ; Prepare for Stage 2
+  ; Read the stage 2 code to 0x8000
+  mov ah, 0x2	; Read disk
+  mov al, 16	; 16 sectors
+  mov ch, 0	; Read from cylinder 0
+  mov cl, 2	; Start read from sector 2
+  mov dl, 0x80	; Disk head number
+  mov bx, 0x8000	; Target address
+  int 0x13	; Let's gooo!
 	
   ; Output a message
   mov si, msg_stg1
@@ -62,8 +62,8 @@ boot:
   ; Check is read succeed
   jc disk_read_error
 
-	; Jump to 0x8000
-	jmp 0x0000:0x8000
+  ; Jump to 0x8000
+  jmp 0x0000:0x8000
 
 print:
   mov ah, 0x0e
