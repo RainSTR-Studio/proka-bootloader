@@ -182,10 +182,10 @@ wait_input:
   je .do_jmp
 
   cmp al, '1'
-  jb wait_input
+  jb .invalid
 
   cmp al, '2'
-  ja wait_input
+  ja .invalid
 
   mov ah, 0x0E
   int 0x10
@@ -198,6 +198,13 @@ wait_input:
   jmp wait_input
 
 .do_jmp:
+  ; Output Enter
+  mov ah, 0x0e
+  mov al, 0x0d
+  int 0x10
+  mov al, 0x0a
+  int 0x10
+
   mov al, [input_buf]
 
   cmp al, [proka_menu_index]
@@ -206,12 +213,12 @@ wait_input:
   cmp al, [win_menu_index]
   je boot_windows
 
+.invalid:
   mov ah, 0x0E
-  mov al, 0x07
+  mov al, 0x07  ; Beep!
   int 0x10
 
   jmp wait_input
-
 
 boot_proka:
   hlt
