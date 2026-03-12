@@ -213,6 +213,8 @@ wait_input:
   cmp al, [win_menu_index]
   je boot_windows
 
+  jmp .invalid
+
 .invalid:
   mov ah, 0x0E
   mov al, 0x07  ; Beep!
@@ -224,7 +226,21 @@ boot_proka:
   hlt
 
 boot_windows:
-  hlt
+  ; Find Windows PBR and load
+  mov ah, 0x2 ; Read disk
+  mov al, 1   ; Only 1 sector
+  mov ch, 0   ; Read from cylinder 0
+  mov cl, [proka_start_lba]
+  mov dl, 0x80
+  mov bx, 0x7c00	; Target address
+  int 0x13  ; Read!
+
+  ; Ask for info
+  mov si, msg_boot_windows
+  call print
+
+  ; Back to PBR!
+  jmp 0x0000:0x7c00
   
 print:
   push ax
@@ -284,5 +300,7 @@ msg_ask_os db "Please select an OS that you want to boot:",0x0d,0x0a,0
 msg_proka db " - ProkaOS ",0x0d,0x0a,0
 msg_windows db " - Windows ",0x0d,0x0a,0
 msg_choose db "Enter your choice (1/2) : ",0
+msg_boot_windows db "[INFO] Booting Windows..."0x0d,0x0a,0
+msg_boot_proka db "[INFO] Booting ProkaOS...",0x0d,0x0a,0
 
 times 16*512 - ($ - $$) db 0
