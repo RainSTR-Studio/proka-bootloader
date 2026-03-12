@@ -97,12 +97,6 @@ start:
   mov [proka_start_lba], ax
   mov [proka_start_lba + 2], dx
 
-  ; Save total sectors
-  mov ax, [total_sectors]
-  mov dx, [total_sectors + 2]
-  mov [proka_total_sectors], ax
-  mov [proka_total_sectors + 2], dx
-
   jmp .next_part
 
 .found_windows_part:
@@ -117,12 +111,6 @@ start:
   mov dx, [start_lba + 2]
   mov [windows_start_lba], ax
   mov [windows_start_lba + 2], dx
-
-  ; Save total sectors
-  mov ax, [total_sectors]
-  mov dx, [total_sectors + 2]
-  mov [windows_total_sectors], ax
-  mov [windows_total_sectors + 2], dx
 
   jmp .next_part
 
@@ -155,7 +143,11 @@ boot_main:
   cmp byte [is_proka_part_found], 1
   jne .is_show_windows
   inc byte [menu_item_count]
-  mov byte [proka_menu_index], 1
+
+  mov al, [menu_item_count]
+  add al, 0x30
+  mov [proka_menu_index], al
+
   mov si, msg_proka
   call print
 
@@ -163,8 +155,11 @@ boot_main:
   cmp byte [is_windows_part_found], 1
   jne .choose
   inc byte [menu_item_count]
+
   mov al, [menu_item_count]
-  mov byte [win_menu_index], al
+  add al, 0x30
+  mov [win_menu_index], al
+
   mov si, msg_windows
   call print
 
@@ -190,10 +185,10 @@ wait_input:
   mov ah, 0x0E
   int 0x10
 
+  mov [input_buf], al
+
   mov al, 0x08   ; Back one 
   int 0x10
-
-  mov [input_buf], al
 
   jmp wait_input
 
@@ -223,24 +218,46 @@ wait_input:
   jmp wait_input
 
 boot_proka:
-  hlt
+  mov si, msg_boot_proka
+  call print
+
+  ; Pass partition start LBA to PBR (stored at 0x7DF0)
+  mov ax, [proka_start_lba]
+  mov dx, [proka_start_lba + 2]
+
+  ; Save it to fixed addr
+  mov [0x7DF0], ax
+  mov [0x7DF2], dx
+
+  ; Load Proka PBR to 0x2000:0x0000 (linear 0x20000)
+  mov ax, [proka_start_lba]
+  mov dx, [proka_start_lba + 2]
+  mov bx, 0x0000         ; Destination offset
+  mov cx, 0x2000         ; Set segment
+  mov es, cx             ; Destination segment
+  call read_lba          ; Read sector
+
+  ; Ready to jump to stage2!
+  mov si, msg_prepare_stg2
+  call print
+
+  ; Jump!
+  jmp 0x2000:0x0000
 
 boot_windows:
-  ; Find Windows PBR and load
-  mov ah, 0x2 ; Read disk
-  mov al, 1   ; Only 1 sector
-  mov ch, 0   ; Read from cylinder 0
-  mov cl, [proka_start_lba]
-  mov dl, 0x80
-  mov bx, 0x7c00	; Target address
-  int 0x13  ; Read!
-
-  ; Ask for info
   mov si, msg_boot_windows
   call print
 
-  ; Back to PBR!
-  jmp 0x0000:0x7c00
+  ; Load Windows PBR from its starting LBA
+  mov ax, [windows_start_lba]
+  mov dx, [windows_start_lba + 2]
+  mov bx, 0x7C00         ; Destination offset
+  mov cx, 0x0000         ; Set segment
+  mov es, cx             ; Destination segment
+  call read_lba          ; Read sector to 0x0000:0x7C00
+
+  ; Jump to Windows PBR (required to be at 0x7C00)
+  jmp 0x0000:0x7C00
   
 print:
   push ax
@@ -257,6 +274,19 @@ print:
 
 .done:
   pop ax
+  ret
+
+read_lba:
+  mov [lba_low], ax
+  mov [lba_low + 2], dx
+
+  mov [dap_off], bx
+  mov [dap_seg], es
+
+  mov si, disk_packet
+  mov ah, 0x42
+  mov dl, 0x80
+  int 0x13
   ret
 
 ; Data sections
@@ -279,15 +309,23 @@ is_windows_part_found db 0
 
 ; Essential data
 proka_start_lba dd 0
-proka_total_sectors dd 0
 windows_start_lba dd 0
-windows_total_sectors dd 0
 
 ; Menu data
 menu_item_count db 0    ; How many choices (1 or 2)
 proka_menu_index db 0   ; Which one is proka
 win_menu_index db 0     ; Which ome is Windows
 input_buf db 0          ; Input data
+
+; DPT data
+disk_packet:
+  db 0x10           ; Packet size (16 bytes)
+  db 0              ; Reserved, must be zero
+  dw 1              ; Number of sectors to read
+dap_off  dw 0       ; Offset of destination buffer
+dap_seg  dw 0       ; Segment of destination buffer
+lba_low  dd 0       ; Lower 32 bits of LBA
+lba_high dd 0       ; Upper 32 bits of LBA (0 for disks under 2TB)
 
 ; Messages
 msg_enter_sg1 db "[STAGE] Entered stage1",0x0d,0x0a,0
@@ -300,7 +338,8 @@ msg_ask_os db "Please select an OS that you want to boot:",0x0d,0x0a,0
 msg_proka db " - ProkaOS ",0x0d,0x0a,0
 msg_windows db " - Windows ",0x0d,0x0a,0
 msg_choose db "Enter your choice (1/2) : ",0
-msg_boot_windows db "[INFO] Booting Windows..."0x0d,0x0a,0
+msg_boot_windows db "[INFO] Booting Windows...",0x0d,0x0a,0
 msg_boot_proka db "[INFO] Booting ProkaOS...",0x0d,0x0a,0
+msg_prepare_stg2 db "[STAGE] Preparing for stage1 -> stage2...",0x0d,0x0a,0
 
 times 16*512 - ($ - $$) db 0
