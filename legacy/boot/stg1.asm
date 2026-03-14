@@ -46,16 +46,12 @@ start:
   mov [end_cyl], al
 
   ; Start LBA (4 bytes)
-  mov ax, [bx + 8]
-  mov dx, [bx + 10]
-  mov [start_lba], ax
-  mov [start_lba + 2], dx
+  mov eax, [bx + 8]
+  mov [start_lba], eax
 
   ; Total sectors (4 bytes)
-  mov ax, [bx + 12]
-  mov dx, [bx + 14]
-  mov [total_sectors], ax
-  mov [total_sectors + 2], dx
+  mov eax, [bx + 12]
+  mov [total_sectors], eax
 
 .check_is_proka_part:
   ; The Proka OS's partition satisfy these conditions:
@@ -92,10 +88,8 @@ start:
   mov byte [is_proka_part_found], 1
 
   ; Save start LBA
-  mov ax, [start_lba]
-  mov dx, [start_lba + 2]
-  mov [proka_start_lba], ax
-  mov [proka_start_lba + 2], dx
+  mov eax, [start_lba]
+  mov [proka_start_lba], eax
 
   jmp .next_part
 
@@ -107,10 +101,8 @@ start:
   mov byte [is_windows_part_found], 1
 
   ; Save start LBA
-  mov ax, [start_lba]
-  mov dx, [start_lba + 2]
-  mov [windows_start_lba], ax
-  mov [windows_start_lba + 2], dx
+  mov eax, [start_lba]
+  mov [windows_start_lba], eax
 
   jmp .next_part
 
@@ -222,20 +214,22 @@ boot_proka:
   call print
 
   ; Pass partition start LBA to PBR (stored at 0x7DF0)
-  mov ax, [proka_start_lba]
-  mov dx, [proka_start_lba + 2]
+  mov eax, [proka_start_lba]
 
   ; Save it to fixed addr
-  mov [0x7DF0], ax
-  mov [0x7DF2], dx
+  mov [0x7DF0], eax
 
-  ; Load Proka PBR to 0x2000:0x0000 (linear 0x20000)
-  mov ax, [proka_start_lba]
-  mov dx, [proka_start_lba + 2]
-  mov bx, 0x0000         ; Destination offset
-  mov cx, 0x2000         ; Set segment
-  mov es, cx             ; Destination segment
-  call read_lba          ; Read sector
+  ; Load Proka LDR to 0x2000:0x0000 (linear 0x20000)
+  mov si, filename
+  push eax
+  mov ax, 0x2000
+  mov es, ax
+  pop eax
+  mov bx, 0
+  
+  ; Load it
+  call load_file
+  jc .error
 
   ; Ready to jump to stage2!
   mov si, msg_prepare_stg2
@@ -243,6 +237,12 @@ boot_proka:
 
   ; Jump!
   jmp 0x2000:0x0000
+
+.error:
+  mov si, msg_boot_proka_failed
+  call print
+  jmp boot_main
+
 
 boot_windows:
   mov si, msg_boot_windows
@@ -310,6 +310,7 @@ is_windows_part_found db 0
 ; Essential data
 proka_start_lba dd 0
 windows_start_lba dd 0
+filename db "PKLDR      "	; 8.3
 
 ; Menu data
 menu_item_count db 0    ; How many choices (1 or 2)
@@ -340,8 +341,7 @@ msg_windows db " - Windows ",0x0d,0x0a,0
 msg_choose db "Enter your choice (1/2) : ",0
 msg_boot_windows db "[INFO] Booting Windows...",0x0d,0x0a,0
 msg_boot_proka db "[INFO] Booting ProkaOS...",0x0d,0x0a,0
+msg_boot_proka_failed db "[ERROR] Boot ProkaOS failed",0x0d,0x0a,0
 msg_prepare_stg2 db "[STAGE] Preparing for stage1 -> stage2...",0x0d,0x0a,0
 
 %include "../drivers/fat32.asm"
-
-times 16*512 - ($ - $$) db 0

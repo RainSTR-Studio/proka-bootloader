@@ -7,18 +7,18 @@ NASM := nasm
 
 OUTPUT_DIR ?= output
 
-FAT32_SRC := fat32.asm
-FAT32_BIN := $(OUTPUT_DIR)/fat32.bin
+STAGE2_SRC := main.asm
+STAGE2_BIN := $(OUTPUT_DIR)/stage2.bin
 
-all: prepare $(FAT32_BIN)
+all: prepare $(STAGE2_BIN)
 
 prepare:
 	mkdir -p $(OUTPUT_DIR)
 
-$(FAT32_BIN): $(FAT32_SRC)
+$(STAGE2_BIN): $(STAGE2_SRC)
 	$(NASM) -f bin $< -o $@
 
 clean:
-	rm -f $(FAT32_BIN)
+	rm -f $(STAGE2_BIN)
 
 .PHONY: all prepare clean

@@ -4,7 +4,7 @@
 # Builds all boot components and creates a plain concatenated disk image.
 # No linking, no ELF, just raw binary concatenation.
 
-SUBDIRS := boot drivers
+SUBDIRS := boot stage2
 
 # Default target
 all: build-subdirs $(OUTPUT_DIR)/hd.img
