@@ -12,12 +12,12 @@
 
 %define FAT32_DEBUG 1
 ; Safe memory regions (all in 0xA000~0xFFFF segment)
-%define BPB_CACHE_SEG     0xA000   ; BPB cache at 0xA000:0x0000 (linear 0xA0000)
-%define ROOT_CACHE_SEG    0xA200   ; Root dir cache at 0xA200:0x0000 (linear 0xA2000)
-%define FAT_CACHE_SEG     0xA400   ; FAT cache at 0xA400:0x0000 (linear 0xA4000)
-%define BPB_CACHE_OFF     0x0000
-%define ROOT_CACHE_OFF    0x0000
-%define FAT_CACHE_OFF     0x0000
+%define BPB_CACHE_OFF     0xA000
+%define ROOT_CACHE_OFF    0xA200
+%define FAT_CACHE_OFF     0xA400
+%define BPB_CACHE_SEG     0x0000
+%define ROOT_CACHE_SEG    0x0000
+%define FAT_CACHE_SEG     0x0000
 
 load_file:
     pushad
@@ -31,11 +31,13 @@ load_file:
 
     ; Read FAT32 BPB from partition start (safe buffer)
     mov  eax, [0x7DF0]
+    mov  edx, eax 
     mov  cx, 1
     push es
     mov  ax, BPB_CACHE_SEG
     mov  es, ax
     mov  bx, BPB_CACHE_OFF
+    mov  eax, edx
     call fat32_read_lba
     pop  es
     jc   .err_read_bpb
@@ -46,23 +48,27 @@ load_file:
 %endif
 
     ; Calculate data area start LBA (fixed 32-bit calculation)
-    push es
-    mov  ax, BPB_CACHE_SEG
+    pushad
+    xor  ax, ax
     mov  es, ax
-    movzx eax, byte [es:BPB_CACHE_OFF + 16]  ; Number of FATs
-    mov  ebx, [es:BPB_CACHE_OFF + 36]        ; Sectors per FAT
-    pop  es
-    mul  ebx                                  ; EDX:EAX = nFats * SecPerFAT
-    push es
-    mov  ax, BPB_CACHE_SEG
-    mov  es, ax
-    mov  ecx, [es:BPB_CACHE_OFF + 14]         ; Reserved sectors
-    pop  es
-    add  eax, ecx
-    adc  edx, 0                               ; handle carry
-    add  eax, [0x7DF0]                        ; Add partition base LBA
-    adc  edx, 0
-    mov  [data_start], eax                    ; store 32-bit LBA
+
+    ; Calculate FAT count * sectors per FAT
+    movzx eax, byte [es:0xA000 + 16]
+    mov   ebx, [es:0xA000 + 36]
+    xor   edx, edx
+    mul   ebx
+
+    ; Add reserved sectors (16-bit field)
+    movzx ecx, word [es:0xA000 + 14]
+    add   eax, ecx
+
+    ; Add partition start LBA
+    add   eax, [es:0x7DF0]
+
+    ; Store final data area start LBA
+    mov   [data_start], eax
+    popad
+
 
     ; Load root directory cluster (safe buffer)
     push es
@@ -292,15 +298,27 @@ fat32_next_cluster:
 ; ==============================================
 fat32_read_lba:
     pusha
-    mov  word [dap + 2], cx
-    mov  [dap + 8], eax
-    mov  [dap + 4], bx
-    mov  [dap + 6], es
-    mov  si, dap
-    mov  ah, 0x42
-    int  0x13
+
+    ; Fill DAP structure for BIOS extended read
+    mov word [dap + 2], cx      ; Number of sectors to read
+    mov word [dap + 4], bx      ; Buffer offset
+    mov word [dap + 6], es      ; Buffer segment
+    mov dword [dap + 8], eax    ; LBA low 32 bits
+    mov dword [dap + 12], 0     ; LBA high 32 bits (set to 0)
+
+    ; Issue BIOS disk interrupt
+    mov si, dap
+    mov ah, 0x42
+    mov dl, 0x80
+    int 0x13
+    jc .disk_error
+
     popa
     ret
+
+.disk_error:
+  hlt
+  jmp $
 
 ; ==============================================
 ; Data & Messages
@@ -308,9 +326,13 @@ fat32_read_lba:
 data_start  dd  0
 
 dap:
-    db  0x10, 0
-    dw  0, 0, 0
-    dq  0
+    db  0x10        ; 0: size of DAP (16 bytes)
+    db  0           ; 1: reserved, must be 0
+    dw  1           ; 2: number of sectors to read
+    dw  0           ; 4: buffer offset
+    dw  0           ; 6: buffer segment
+    dq  0           ; 8: 64-bit LBA
+
 
 %if FAT32_DEBUG
 fat32_msg_init     db  '[FAT32] Initializing...',13,10,0
