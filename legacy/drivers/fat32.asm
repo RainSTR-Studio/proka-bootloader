@@ -75,11 +75,13 @@ load_file:
     mov  ax, BPB_CACHE_SEG
     mov  es, ax
     mov  eax, [es:BPB_CACHE_OFF + 44]         ; Root directory cluster
+    mov  edx, eax
     pop  es
     push es
     mov  ax, ROOT_CACHE_SEG
     mov  es, ax
     mov  bx, ROOT_CACHE_OFF
+    mov  eax, edx
     call fat32_load_cluster
     pop  es
     jc   .err_read_root
@@ -205,6 +207,7 @@ load_file:
 ;      ES:BX = destination
 ; ==============================================
 fat32_load_cluster:
+    mov dword [0x7E20], eax
     push eax
     sub  eax, 2
     jc   .error
