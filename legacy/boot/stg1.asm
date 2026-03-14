@@ -285,7 +285,7 @@ read_lba:
 
   mov si, disk_packet
   mov ah, 0x42
-  mov dl, 0x80
+  mov dl, [0x0500]
   int 0x13
   ret
 
@@ -341,5 +341,7 @@ msg_choose db "Enter your choice (1/2) : ",0
 msg_boot_windows db "[INFO] Booting Windows...",0x0d,0x0a,0
 msg_boot_proka db "[INFO] Booting ProkaOS...",0x0d,0x0a,0
 msg_prepare_stg2 db "[STAGE] Preparing for stage1 -> stage2...",0x0d,0x0a,0
+
+%include "../drivers/fat32.asm"
 
 times 16*512 - ($ - $$) db 0

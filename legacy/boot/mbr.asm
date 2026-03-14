@@ -22,6 +22,8 @@ boot:
   ; Set up stack
   mov sp, 0x7c00	; Set stack pointer as 0x7c00
 
+  mov byte [0x0500], dl
+
   ; Clear screen
   mov ax, 0x0600
   mov bh, 0x07
@@ -51,7 +53,7 @@ boot:
   mov al, 16	; 16 sectors
   mov ch, 0	; Read from cylinder 0
   mov cl, 2	; Start read from sector 2
-  mov dl, 0x80	; Disk head number
+  mov dl, [0x0500]	; Disk head number
   mov bx, 0x8000	; Target address
   int 0x13	; Let's gooo!
 	
@@ -86,7 +88,7 @@ disk_read_error:
 
 hang:
   hlt
-	jmp hang
+  jmp hang
 
 msg_stg1 db "[STAGE] Preparing for stage0 -> stage1...",0x0d,0x0a,0
 msg_disk_err db "[ERROR] Cannot read stage1 data!",0x0d,0x0a,0
