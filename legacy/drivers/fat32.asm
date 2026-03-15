@@ -105,7 +105,7 @@ load_file:
     mov  es, ax
     mov  di, ROOT_CACHE_OFF
     mov  cx, 0xFFFF
-    mov  si, [bp + 12]
+    mov  si, [bp + 6]
 
 .search_loop:
     cmp  byte [es:di], 0xE5
@@ -155,37 +155,51 @@ load_file:
     mov  ax, ROOT_CACHE_SEG
     mov  es, ax
     mov  di, [found_dir_offset]        ; Load saved entry offset
-    mov  eax, [es:di + 20]              ; High word of first cluster
-    shl  eax, 16
-    mov  ax, [es:di + 26]               ; Low word of first cluster
-    pop  es
 
+    ; Read 28-bit starting cluster from directory entry
+    ; High 16 bits: offset 0x14, low 16 bits: offset 0x1A
+    movzx  eax, word [es:di + 0x14]  ; Get high 16 bits of cluster
+    shl  eax, 16                     ; Shift to upper half
+    movzx  ebx, word [es:di + 0x1A]  ; Get low 16 bits of cluster
+    or  eax, ebx                    ; Combine into 32-bit value
+    and  eax, 0x0FFFFFFF             ; Keep only FAT32 28-bit cluster
+    mov  [file_start_cluster], eax   ; Save start cluster
+
+    ; Read file size (4 bytes at offset 0x1C)
+    mov  eax, [es:di + 0x1C]         ; Get 32-bit file length
+    mov  [file_size], eax            ; Save file size
+
+    pop  es
     and  eax, 0x0FFFFFFF
 
     ; Validate cluster
-    cmp  eax, 0x0FFFFFF8
+    mov  eax, [file_start_cluster]
+    cmp  eax, 2                     ; clusters start at 2
+    jb   .err_bad_cluster
+    cmp  eax, 0x0FFFFFF8           ; end-of-chain marker
     jae  .err_bad_cluster
 
-    ; NOTE: The following line (pop es) was originally present but is now removed
-    ; because ES was already restored above. Removing it fixes stack imbalance.
-    ; (Old code: pop es  ; Restore original ES for loading) -- DELETED
-
 .load_file_loop:
-    push bx
-    push es
-    
-    ; Use the saved address
-    mov  es, [save_es]
-    mov  bx, [save_bx]
+    ; Read current cluster
+    mov    eax, [file_start_cluster]
+    mov    es, [save_es]
+    mov    bx, [save_bx]
 
-    call fat32_load_cluster
-    pop  es
-    pop  bx
-    jc   .err_read_file
+    call   fat32_load_cluster      ; Load one full cluster
+    jc     .err_read_file
 
-    call fat32_next_cluster
-    cmp  eax, 0x0FFFFFF8
-    jb   .load_file_loop
+    ; Advance destination by one cluster (1 sector = 512 bytes)
+    add    word [save_bx], 512
+
+    ; Get next cluster in chain
+    mov    eax, [file_start_cluster]
+    call   fat32_next_cluster
+    mov    [file_start_cluster], eax
+
+    ; Continue if not end of cluster chain
+    cmp    eax, 0x0FFFFFF8
+    jb     .load_file_loop
+
 
 %if FAT32_DEBUG
     mov  si, fat32_msg_done
@@ -248,17 +262,17 @@ load_file:
 ;      ES:BX = destination
 ; ==============================================
 fat32_load_cluster:
-    mov dword [0x7E20], eax        ; debug: store cluster for inspection
     push eax
     sub  eax, 2
     jc   .error
 
     push es
+    push eax
     mov  ax, BPB_CACHE_SEG
     mov  es, ax
+    pop  eax
     movzx ecx, byte [es:BPB_CACHE_OFF + 13]  ; Sectors per cluster
     pop  es 
-    xor  edx, edx
     mul  ecx                                  ; EDX:EAX = (cluster-2)*SecPerClust
     add  eax, [data_start]
     adc  edx, 0
@@ -278,7 +292,7 @@ fat32_load_cluster:
 .error:
     pop  eax
     stc
-    ret
+    ret 
 
 ; ==============================================
 ; fat32_next_cluster
@@ -373,6 +387,8 @@ fat32_read_lba:
 ; ==============================================
 data_start          dd  0          ; Data area start LBA (calculated)
 found_dir_offset    dw  0          ; Offset of found directory entry within root buffer
+file_start_cluster  dd  0
+file_size           dd  0
 
 save_es    dw  0 
 save_bx    dw  0
