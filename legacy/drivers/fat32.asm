@@ -160,8 +160,8 @@ load_file:
     ; High 16 bits: offset 0x14, low 16 bits: offset 0x1A
     movzx  eax, word [es:di + 0x14]  ; Get high 16 bits of cluster
     shl  eax, 16                     ; Shift to upper half
-    movzx  ebx, word [es:di + 0x1A]  ; Get low 16 bits of cluster
-    or  eax, ebx                    ; Combine into 32-bit value
+    movzx ebx, word [es:di + 0x1A]  ; Get low 16 bits of cluster
+    or   eax, ebx                    ; Combine into 32-bit value
     and  eax, 0x0FFFFFFF             ; Keep only FAT32 28-bit cluster
     mov  [file_start_cluster], eax   ; Save start cluster
 
@@ -179,28 +179,40 @@ load_file:
     cmp  eax, 0x0FFFFFF8           ; end-of-chain marker
     jae  .err_bad_cluster
 
-.load_file_loop:
+.load_file_init:
     ; Read current cluster
-    mov    eax, [file_start_cluster]
-    mov    es, [save_es]
-    mov    bx, [save_bx]
+    mov  eax, [file_start_cluster]
+    mov  es, [save_es]
+    mov  bx, [save_bx]
 
-    call   fat32_load_cluster      ; Load one full cluster
-    jc     .err_read_file
+.load_file_loop:
+    ; Save the last cluster 
+    mov  [last_cluster], eax 
+    mov  dx, BPB_CACHE_SEG
+    mov  fs, dx
+    movzx cx, byte [fs:BPB_CACHE_OFF + 13]  ; SPC
 
-    ; Advance destination by one cluster (1 sector = 512 bytes)
-    add    word [save_bx], 512
+    ; Get next cluster
+    call fat32_load_cluster      ; Load one full cluster
+    jc   .err_read_file
+
+    ; The fat32_load_cluster automatically
+    ; Moved the address, so no need anymore
 
     ; Get next cluster in chain
-    mov    eax, [file_start_cluster]
-    call   fat32_next_cluster
-    mov    [file_start_cluster], eax
+    call fat32_next_cluster
+    jc .err_read_file
 
     ; Continue if not end of cluster chain
-    cmp    eax, 0x0FFFFFF8
-    jb     .load_file_loop
+    cmp  eax, 0x0FFFFFF8
+    jae  .done
 
+    cmp  eax, [last_cluster]
+    je   .done
 
+    jmp .load_file_loop
+
+.done:
 %if FAT32_DEBUG
     mov  si, fat32_msg_done
     call print
@@ -269,14 +281,13 @@ fat32_load_cluster:
     push es
     push eax
     mov  ax, BPB_CACHE_SEG
-    mov  es, ax
+    mov  fs, ax
     pop  eax
-    movzx ecx, byte [es:BPB_CACHE_OFF + 13]  ; Sectors per cluster
+    movzx ecx, byte [fs:BPB_CACHE_OFF + 13]  ; Sectors per cluster
     pop  es 
     mul  ecx                                  ; EDX:EAX = (cluster-2)*SecPerClust
     add  eax, [data_start]
     adc  edx, 0
-    mov  cx, 1                                 ; Currently hardcoded to 1 sector per cluster
 
 .read_loop:
     call fat32_read_lba
@@ -294,61 +305,82 @@ fat32_load_cluster:
     stc
     ret 
 
+
 ; ==============================================
 ; fat32_next_cluster
 ; Get next cluster from FAT32 FAT
-; In:  EAX = current cluster
+; In:  EAX = current cluster (32-bit cluster number)
 ; Out: EAX = next cluster
+;      CF = 0 on success
+;      CF = 1 on failure
 ; ==============================================
 fat32_next_cluster:
     push ebx
+    push ecx
+    push edx
+    push esi
+    push edi
+    push fs
     push es
+    mov esi, eax
 
-    ; FAT sector LBA = partition start + reserved sectors + (cluster / 128)
-    mov ebx, eax
-    shr ebx, 7                     ; ebx = cluster / 128
-    push es
+    ; Do cluster / 128
+    mov edx, eax
+    shr edx, 7
+
+    ; Get ReservedSector and FATSz32 from BPB
     mov ax, BPB_CACHE_SEG
-    mov es, ax
-    add ebx, [es:BPB_CACHE_OFF + 14]   ; + Reserved sectors
-    pop es
-    add ebx, [0x7DF0]                   ; + partition start LBA
+    mov fs, ax
+    mov bx, BPB_CACHE_OFF
+    movzx eax, word [fs:BPB_CACHE_OFF + 0x0E]   ; BPB_RsvdSecCnt
+    add eax, edx      ; (cluster / 128) + ReservedSecCnt
+    mov ebx, [0x7DF0] ; Partition start LBA
+    add eax, ebx
 
-    ; Read FAT sector into cache
-    push eax
-    mov eax, ebx
-    push es
-    mov ax, FAT_CACHE_SEG
-    mov es, ax
+    ; Load FAT table
+    push es 
+    mov cx, FAT_CACHE_SEG
+    mov es, cx
     mov bx, FAT_CACHE_OFF
-    mov cx, 1
     call fat32_read_lba
     pop es
-    jc .error_fat
+    jc .error
 
-    pop eax
-    ; Offset in FAT sector = (cluster & 0x7F) * 4
-    and eax, 0x7F
-    shl eax, 2
-    push es
+    ; Get the offset
+    mov eax, esi
+    and eax, 0x7F 
+    shl eax, 2 
+    
+    ; Load the target cluster
     mov ax, FAT_CACHE_SEG
-    mov es, ax
-    mov eax, [es:FAT_CACHE_OFF + eax]   ; Read the cluster entry
-    pop es
-    and eax, 0x0FFFFFFF                  ; Mask to 28-bit valid value
+    mov fs, ax
+    mov ebx, [fs:eax]
+    and ebx, 0x0FFFFFFF
 
-    pop es
-    pop ebx
+    ; Check is that available
+    cmp ebx, 0 
+    je  .error
+
+    cmp ebx, 0x0FFFFFF7
+    je  .error
+
+    ; Return
+    mov eax, ebx
     clc
-    ret
 
-.error_fat:
-    pop eax
-    pop es
+.pop_out:
+    pop es 
+    pop fs
+    pop edi
+    pop esi
+    pop edx
+    pop ecx
     pop ebx
-    stc
     ret
 
+.error:
+    stc
+    jmp .pop_out
 
 ; ==============================================
 ; fat32_read_lba
@@ -360,6 +392,7 @@ fat32_next_cluster:
 fat32_read_lba:
     pushad                         ; Save all 32-bit registers (important!)
 
+.fill_dap:
     ; Fill DAP structure for BIOS extended read
     mov word [dap + 2], cx      ; Number of sectors to read
     mov word [dap + 4], bx      ; Buffer offset
@@ -379,7 +412,7 @@ fat32_read_lba:
 
 .disk_error:
     popad
-    sti
+    stc
     ret
 
 ; ==============================================
@@ -389,6 +422,7 @@ data_start          dd  0          ; Data area start LBA (calculated)
 found_dir_offset    dw  0          ; Offset of found directory entry within root buffer
 file_start_cluster  dd  0
 file_size           dd  0
+last_cluster        dd  0
 
 save_es    dw  0 
 save_bx    dw  0

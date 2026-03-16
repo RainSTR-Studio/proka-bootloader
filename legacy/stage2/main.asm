@@ -2,6 +2,11 @@
 [bits 16]
 
 stage2_start:
+  ; Set up segment
+  mov ax, cs
+  mov ds, ax
+
+  ; Print message
   mov si, msg_enter_stg2
   call print
   hlt
@@ -22,3 +27,5 @@ print:
   ret
 
 msg_enter_stg2 db "[STAGE] Entered stage2",0x0d,0x0a,0
+
+%include "../drivers/fat32.asm"
