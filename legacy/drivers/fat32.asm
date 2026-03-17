@@ -1,7 +1,5 @@
-[BITS 16]
-
 ; ==============================================
-; FAT32 File Loader Driver (Safe Memory Version)
+; FAT32 File Loader Driver (16-bit Version)
 ; All temporary buffers are within 0xA000~0xFFFF
 ; Interface:
 ;   Partition LBA stored at [0x7E00]
@@ -176,7 +174,7 @@ load_file:
     mov  eax, [file_start_cluster]
     cmp  eax, 2                     ; clusters start at 2
     jb   .err_bad_cluster
-    cmp  eax, 0x0FFFFFF8            ; broken cluster
+    cmp  eax, 0x0FFFFFF8            ; broken cluster (below)
     jae  .err_bad_cluster
 
 .load_file_init:
@@ -185,34 +183,28 @@ load_file:
     mov  es, [save_es]
     mov  bx, [save_bx]
 
+    ; Load FAT to memory
+    call fat32_load_fat_to_memory
+
 .load_file_loop:
     ; Save the last cluster 
-    push eax
-    mov ah, 0x0E
-    mov al, 'A'
-    int 0x10
-    pop eax
-    mov  [last_cluster], eax
     mov  [0x7f00], eax
 
     ; Get next cluster
     call fat32_load_cluster      ; Load one full cluster
     jc   .err_read_file
-
+  
     ; The fat32_load_cluster automatically
     ; Moved the address, so no need anymore
 
-    ; Get next cluster in chain
-    call fat32_next_cluster
-    jc .err_read_file
-    mov  [0x7ff0], eax
-
-    ; Continue if not end of cluster chain
+    ; Check is it the file_end sign
     cmp  eax, 0x0FFFFFF8
     jae  .done
 
-    ;cmp  eax, [last_cluster]
-    ;je   .done
+    ; Get next cluster
+    call fat32_next_cluster
+    jc   .err_read_file
+    mov  [0x7ff0], eax
 
     jmp .load_file_loop
 
@@ -279,6 +271,11 @@ load_file:
 ; ==============================================
 fat32_load_cluster:
     push eax
+
+    ; Check is it end sign
+    cmp eax, 0x0FFFFFF8
+    jae .set_end_and_return
+
     sub  eax, 2
     jc   .error
 
@@ -298,15 +295,23 @@ fat32_load_cluster:
     call fat32_read_lba
     jc   .error
 
-    pop  eax
+    ; Update next addr and return
+    shl cx, 9
+    add bx, cx
+
+.set_end_and_return:
+    mov eax, 0x0FFFFFF8     ; Force set
+    jmp .return
+
+.return:
     clc
+    pop  eax
     ret
 
 .error:
-    pop  eax
     stc
-    ret 
-
+    pop  eax
+    ret
 
 ; ==============================================
 ; fat32_next_cluster
@@ -324,49 +329,32 @@ fat32_next_cluster:
     push edi
     push fs
     push es
-    mov esi, eax
 
-    ; Do cluster / 128
-    mov edx, eax
-    shr edx, 7
-
-    ; Get ReservedSector and FATSz32 from BPB
-    mov ax, BPB_CACHE_SEG
-    mov fs, ax
-    movzx eax, word [fs:BPB_CACHE_OFF + 0x0E]   ; BPB_RsvdSecCnt
-    add eax, edx      ; (cluster / 128) + ReservedSecCnt
-    mov ebx, [0x7E00] ; Partition start LBA
-    add eax, ebx
-
-    ; Load FAT table
-    push es 
-    mov cx, FAT_CACHE_SEG
-    mov es, cx
-    mov bx, FAT_CACHE_OFF
-    mov cx, 2
-    call fat32_read_lba
-    pop es
-    jc .error
+    ; Check the current cluster
+    cmp eax, 0x0FFFFFF8
+    jae .return
 
     ; Get the offset
-    mov eax, esi
-    shl eax, 2
+    mov esi, eax
+    shl esi, 2
     
     ; Load the target cluster
     mov ax, FAT_CACHE_SEG
     mov fs, ax
-    mov ebx, [fs:eax]
-    and ebx, 0x0FFFFFFF
+    mov bx, FAT_CACHE_OFF
+    add bx, si
+    mov [0x7fd0], bx
+    mov eax, [fs:bx]
+    and eax, 0x0FFFFFFF
 
     ; Check is that available
-    cmp ebx, 0 
+    cmp eax, 0 
     je  .error
 
-    cmp ebx, 0x0FFFFFF7
+    cmp eax, 0x0FFFFFF7
     je  .error
 
-    ; Return
-    mov eax, ebx
+.return:
     clc
 
 .pop_out:
@@ -382,6 +370,38 @@ fat32_next_cluster:
 .error:
     stc
     jmp .pop_out
+
+; ==============================================
+; fat32_load_fat_to_memory
+; Load FAT table into cache, only call ONCE
+; ==============================================
+fat32_load_fat_to_memory:
+    push eax
+    push ebx
+    push ecx
+    push es
+
+    ; Get ReservedSector and FATSz32 from BPB
+    mov ax, BPB_CACHE_SEG
+    mov fs, ax
+    movzx eax, word [fs:BPB_CACHE_OFF + 0x0E]   ; BPB_RsvdSecCnt
+    mov ebx, [0x7E00] ; Partition start LBA
+    add eax, ebx
+
+    ; Load FAT table
+    push es
+    mov cx, FAT_CACHE_SEG
+    mov es, cx
+    mov bx, FAT_CACHE_OFF
+    mov cx, 2
+    call fat32_read_lba
+    pop es
+
+    pop es
+    pop ecx
+    pop ebx
+    pop eax
+    ret
 
 ; ==============================================
 ; fat32_read_lba
@@ -423,7 +443,6 @@ data_start          dd  0          ; Data area start LBA (calculated)
 found_dir_offset    dw  0          ; Offset of found directory entry within root buffer
 file_start_cluster  dd  0
 file_size           dd  0
-last_cluster        dd  0
 
 save_es    dw  0 
 save_bx    dw  0
@@ -437,15 +456,15 @@ dap:
     dq  0           ; 8: 64-bit LBA
 
 %if FAT32_DEBUG
-fat32_msg_init     db  '[FAT32] Initializing...',13,10,0
-fat32_msg_bpb_ok   db  '[FAT32] BPB read OK',13,10,0
-fat32_msg_root_ok  db  '[FAT32] Root dir loaded',13,10,0
-fat32_msg_found    db  '[FAT32] File found',13,10,0
-fat32_msg_done     db  '[FAT32] Load complete',13,10,0
+fat32_msg_init     db  '[FAT32] [INFO] Initializing...',13,10,0
+fat32_msg_bpb_ok   db  '[FAT32] [INFO] Successfully read BPB',13,10,0
+fat32_msg_root_ok  db  '[FAT32] [INFO] Root dir loaded',13,10,0
+fat32_msg_found    db  '[FAT32] [INFO] File discovered',13,10,0
+fat32_msg_done     db  '[FAT32] [INFO] Load complete',13,10,0
 
-fat32_err_bpb      db  '[FAT32] ERR: read BPB failed',13,10,0
-fat32_err_root     db  '[FAT32] ERR: read root failed',13,10,0
-fat32_err_notfound db  '[FAT32] ERR: file not found',13,10,0
-fat32_err_cluster  db  '[FAT32] ERR: bad cluster',13,10,0
-fat32_err_file     db  '[FAT32] ERR: read file failed',13,10,0
+fat32_err_bpb      db  '[FAT32] [ERROR] Read BPB failed',13,10,0
+fat32_err_root     db  '[FAT32] [ERROR] Read root failed',13,10,0
+fat32_err_notfound db  '[FAT32] [ERROR] File not found',13,10,0
+fat32_err_cluster  db  '[FAT32] [ERROR] bad cluster',13,10,0
+fat32_err_file     db  '[FAT32] [ERROR] Read file failed',13,10,0
 %endif
