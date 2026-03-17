@@ -213,11 +213,11 @@ boot_proka:
   mov si, msg_boot_proka
   call print
 
-  ; Pass partition start LBA to PBR (stored at 0x7DF0)
+  ; Pass partition start LBA to PBR (stored at 0x7E00)
   mov eax, [proka_start_lba]
 
   ; Save it to fixed addr
-  mov [0x7DF0], eax
+  mov [0x7E00], eax
 
   ; Load Proka LDR to 0x2000:0x0000 (linear 0x20000)
   mov si, filename

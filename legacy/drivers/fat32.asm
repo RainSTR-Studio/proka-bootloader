@@ -4,7 +4,7 @@
 ; FAT32 File Loader Driver (Safe Memory Version)
 ; All temporary buffers are within 0xA000~0xFFFF
 ; Interface:
-;   Partition LBA stored at [0x7DF0]
+;   Partition LBA stored at [0x7E00]
 ;   DS:SI = 8.3 filename (11 bytes)
 ;   ES:BX = load destination
 ;   Return: CF = 0 success, CF = 1 error
@@ -14,7 +14,7 @@
 ; Safe memory regions (all in 0xA000~0xFFFF segment)
 %define BPB_CACHE_OFF     0xA000
 %define ROOT_CACHE_OFF    0xA200
-%define FAT_CACHE_OFF     0xA400
+%define FAT_CACHE_OFF     0xA600
 %define BPB_CACHE_SEG     0x0000
 %define ROOT_CACHE_SEG    0x0000
 %define FAT_CACHE_SEG     0x0000
@@ -39,7 +39,7 @@ load_file:
 %endif
 
     ; Read FAT32 BPB from partition start (safe buffer)
-    mov  eax, [0x7DF0]
+    mov  eax, [0x7E00]
     mov  edx, eax
     mov  cx, 1
     push es
@@ -58,21 +58,21 @@ load_file:
 
     ; Calculate data area start LBA (fixed 32-bit calculation)
     pushad
-    xor  ax, ax
+    mov  ax, BPB_CACHE_SEG
     mov  es, ax
 
     ; Calculate FAT count * sectors per FAT
-    movzx eax, byte [es:0xA000 + 16]      ; Number of FATs
-    mov   ebx, [es:0xA000 + 36]            ; Sectors per FAT
+    movzx eax, byte [es:BPB_CACHE_OFF + 0x10]       ; Number of FATs
+    mov   ebx, [es:BPB_CACHE_OFF + 0x24]            ; Sectors per FAT
     xor   edx, edx
     mul   ebx                              ; eax = FATs * sectors per FAT
 
     ; Add reserved sectors (16-bit field!)
-    movzx ecx, word [es:0xA000 + 14]       ; Reserved sectors
+    movzx ecx, word [es:BPB_CACHE_OFF + 14]       ; Reserved sectors
     add   eax, ecx
 
     ; Add partition start LBA
-    add   eax, [es:0x7DF0]                  ; Partition start LBA
+    add   eax, [es:0x7E00]                        ; Partition start LBA
 
     ; Store final data area start LBA
     mov   [data_start], eax
@@ -176,7 +176,7 @@ load_file:
     mov  eax, [file_start_cluster]
     cmp  eax, 2                     ; clusters start at 2
     jb   .err_bad_cluster
-    cmp  eax, 0x0FFFFFF8           ; end-of-chain marker
+    cmp  eax, 0x0FFFFFF8            ; broken cluster
     jae  .err_bad_cluster
 
 .load_file_init:
@@ -187,10 +187,13 @@ load_file:
 
 .load_file_loop:
     ; Save the last cluster 
-    mov  [last_cluster], eax 
-    mov  dx, BPB_CACHE_SEG
-    mov  fs, dx
-    movzx cx, byte [fs:BPB_CACHE_OFF + 13]  ; SPC
+    push eax
+    mov ah, 0x0E
+    mov al, 'A'
+    int 0x10
+    pop eax
+    mov  [last_cluster], eax
+    mov  [0x7f00], eax
 
     ; Get next cluster
     call fat32_load_cluster      ; Load one full cluster
@@ -202,13 +205,14 @@ load_file:
     ; Get next cluster in chain
     call fat32_next_cluster
     jc .err_read_file
+    mov  [0x7ff0], eax
 
     ; Continue if not end of cluster chain
     cmp  eax, 0x0FFFFFF8
     jae  .done
 
-    cmp  eax, [last_cluster]
-    je   .done
+    ;cmp  eax, [last_cluster]
+    ;je   .done
 
     jmp .load_file_loop
 
@@ -283,18 +287,16 @@ fat32_load_cluster:
     mov  ax, BPB_CACHE_SEG
     mov  fs, ax
     pop  eax
-    movzx ecx, byte [fs:BPB_CACHE_OFF + 13]  ; Sectors per cluster
+    movzx ecx, byte [fs:BPB_CACHE_OFF + 0x0D]  ; Sectors per cluster
     pop  es 
-    mul  ecx                                  ; EDX:EAX = (cluster-2)*SecPerClust
+    mul  ecx                                   ; EDX:EAX = (cluster-2)*SecPerClust
     add  eax, [data_start]
     adc  edx, 0
 
-.read_loop:
+.read:
+    movzx cx, byte[fs:BPB_CACHE_OFF + 0x0D]    ; SPC times
     call fat32_read_lba
     jc   .error
-    add  bx, 512
-    inc  eax
-    loop .read_loop
 
     pop  eax
     clc
@@ -331,10 +333,9 @@ fat32_next_cluster:
     ; Get ReservedSector and FATSz32 from BPB
     mov ax, BPB_CACHE_SEG
     mov fs, ax
-    mov bx, BPB_CACHE_OFF
     movzx eax, word [fs:BPB_CACHE_OFF + 0x0E]   ; BPB_RsvdSecCnt
     add eax, edx      ; (cluster / 128) + ReservedSecCnt
-    mov ebx, [0x7DF0] ; Partition start LBA
+    mov ebx, [0x7E00] ; Partition start LBA
     add eax, ebx
 
     ; Load FAT table
@@ -342,14 +343,14 @@ fat32_next_cluster:
     mov cx, FAT_CACHE_SEG
     mov es, cx
     mov bx, FAT_CACHE_OFF
+    mov cx, 2
     call fat32_read_lba
     pop es
     jc .error
 
     ; Get the offset
     mov eax, esi
-    and eax, 0x7F 
-    shl eax, 2 
+    shl eax, 2
     
     ; Load the target cluster
     mov ax, FAT_CACHE_SEG
