@@ -187,9 +187,6 @@ load_file:
     call fat32_load_fat_to_memory
 
 .load_file_loop:
-    ; Save the last cluster 
-    mov  [0x7f00], eax
-
     ; Get next cluster
     call fat32_load_cluster      ; Load one full cluster
     jc   .err_read_file
@@ -204,7 +201,6 @@ load_file:
     ; Get next cluster
     call fat32_next_cluster
     jc   .err_read_file
-    mov  [0x7ff0], eax
 
     jmp .load_file_loop
 
@@ -343,7 +339,6 @@ fat32_next_cluster:
     mov fs, ax
     mov bx, FAT_CACHE_OFF
     add bx, si
-    mov [0x7fd0], bx
     mov eax, [fs:bx]
     and eax, 0x0FFFFFFF
 
