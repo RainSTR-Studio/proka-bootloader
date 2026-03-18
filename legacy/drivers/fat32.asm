@@ -295,14 +295,14 @@ fat32_load_cluster:
     shl cx, 9
     add bx, cx
 
-.set_end_and_return:
-    mov eax, 0x0FFFFFF8     ; Force set
-    jmp .return
-
 .return:
     clc
     pop  eax
     ret
+
+.set_end_and_return:
+    mov eax, 0x0FFFFFF8     ; Force set
+    jmp .return
 
 .error:
     stc

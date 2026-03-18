@@ -1,5 +1,11 @@
-[org 0]
-[bits 16]
+; Proka Bootloader - The bootloader of Proka OS
+; Copyright (C) RainSTR Studio 2026, All rights reserved.
+;
+; This file is the stage 2 of the whole boot process, which
+; will initialize more things, such as VBE, memmap and so on.
+
+[org 0]		; 0x2000:0x0000
+[bits 16]	; Still real mode :/
 
 stage2_start:
   ; Set up segment
@@ -9,7 +15,15 @@ stage2_start:
   ; Print message
   mov si, msg_enter_stg2
   call print
-  hlt
+  jmp get_vbe_info	; getinfo.asm
+
+; Fallback (only for failed)
+fallback_stg1:
+  mov si, msg_fallback_stg1
+  call print
+  xor ax, ax
+  mov ds, ax
+  jmp 0x0000:0x8000
 
 print:
   push ax
@@ -27,5 +41,6 @@ print:
   ret
 
 msg_enter_stg2 db "[STAGE] Entered stage2",0x0d,0x0a,0
-
+msg_fallback_stg1 db "[ERROR] Critical error happened, falling back to stage1...",0x0d,0x0a,0
+%include "getinfo.asm"
 %include "../drivers/fat32.asm"

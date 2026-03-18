@@ -1,8 +1,11 @@
 ; Proka Bootloader - The bootloader of Proka OS
 ; Copyright (C) RainSTR Studio 2026, All rights reserved.
 ;
-; This file is the stage 2 of the whole boot process, which
-; will initialize more things, such as VBE, disk and so on.
+; This file is the stage1 of boot process, which will 
+; parse DPT, and ask for choosing an OS.
+;
+; Once the OS has chosen, the stage1 will do the next boot 
+; process, which can boot Windows and Proka.
 
 [org 0x8000]  ; The jumped target
 [bits 16]     ; Real mode still
