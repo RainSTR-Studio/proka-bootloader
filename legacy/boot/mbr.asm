@@ -42,11 +42,6 @@ boot:
   mov si, msg_loaded_mbr
   call print
 	
-  ; Enable A20
-  in al, 0x92	; Read from A20 port
-  or al, 2	; Set as 1
-  out 0x92, al	; Send port
-	
   ; Prepare for Stage 2
   ; Read the stage 2 code to 0x8000
   mov ah, 0x2	; Read disk

@@ -56,7 +56,7 @@ get_memory_map:
   jne .e820_read
 
 .e820_end:
-  jmp load_krnl	      ; loadkrnl.asm, included by main.asm
+  jmp enable_vbe      ; prestg3.asm, included by main.asm
 
 msg_get_vbe db "[INFO] Getting VBE info (1024x768x32)...",0x0d,0x0a,0
 msg_get_memmap db "[INFO] Getting memory map...",0x0d,0x0a,0
