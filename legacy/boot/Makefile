@@ -5,18 +5,15 @@
 
 NASM := nasm
 
-OUTPUT_DIR ?= output
+BUILD_DIR ?= output
 
 MBR_SRC := mbr.asm
 BOOT_SRC := stg1.asm
 
-MBR_BIN := $(OUTPUT_DIR)/mbr.bin
-BOOT_BIN := $(OUTPUT_DIR)/stg1.bin
+MBR_BIN := $(BUILD_DIR)/mbr.bin
+BOOT_BIN := $(BUILD_DIR)/stg1.bin
 
-all: prepare $(MBR_BIN) $(BOOT_BIN)
-
-prepare:
-	mkdir -p $(OUTPUT_DIR)
+all: $(MBR_BIN) $(BOOT_BIN)
 
 $(MBR_BIN): $(MBR_SRC)
 	$(NASM) -f bin $< -o $@

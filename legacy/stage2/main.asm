@@ -4,9 +4,9 @@
 ; This file is the stage 2 of the whole boot process, which
 ; will initialize more things, such as VBE, memmap and so on.
 
-[org 0]		; 0x2000:0x0000
 [bits 16]	; Still real mode :/
 
+section .text.head
 stage2_start:
   ; Set up segment
   mov ax, cs
@@ -17,6 +17,7 @@ stage2_start:
   call print
   jmp get_vbe_info	; getinfo.asm
 
+section .text
 ; Fallback (only for failed)
 fallback_stg1:
   mov si, msg_fallback_stg1
@@ -40,6 +41,7 @@ print:
   pop ax
   ret
 
+section .data
 msg_enter_stg2 db "[STAGE] Entered stage2",0x0d,0x0a,0
 msg_fallback_stg1 db "[ERROR] Critical error happened, falling back to stage1...",0x0d,0x0a,0
 %include "getinfo.asm"

@@ -4,6 +4,7 @@
 ; This file is the info getter of stage2, it will actually
 ; save essential things to 0x10000 (0x1000:0x0000).
 
+section .text
 ; Get VBE Info
 get_vbe_info:
   mov si, msg_get_vbe
@@ -58,6 +59,8 @@ get_memory_map:
 .e820_end:
   jmp enable_vbe      ; prestg3.asm, included by main.asm
 
+section .data
+; Messages
 msg_get_vbe db "[INFO] Getting VBE info (1024x768x32)...",0x0d,0x0a,0
 msg_get_memmap db "[INFO] Getting memory map...",0x0d,0x0a,0
 msg_get_vbe_err db "[ERROR] Failed to get VBE info",0x0d,0x0a,0

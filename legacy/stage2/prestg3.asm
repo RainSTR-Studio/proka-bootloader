@@ -1,9 +1,10 @@
 ; Proka Bootloader - The bootloader of Proka OS
 ; Copyright (C) RainSTR Studio 2026, All rights reserved.
 ;
-; This file is the kernel loader of stage2, which will load
-; kernel to 0x100000
+; This file is will prepare for stage3, and load 
+; The C code
 
+section .text
 enable_vbe:
   mov si, msg_enable_vbe
   call print
@@ -112,6 +113,7 @@ protected_mode:
 
   jmp $
 
+section .data
 ; Messages
 msg_enable_vbe db "[INFO] Enabling VBE...",0x0d,0x0a,0
 msg_enable_vbe_err db "[ERROR] Failed to enable VBE",0x0d,0x0a,0

@@ -1,6 +1,6 @@
 # The UEFI part bootloader builder
 
-OUTPUT_DIR ?= output
+OUTPUT_DIR ?= build
 
 all:
 	@echo "Building UEFI part (release mode)..."

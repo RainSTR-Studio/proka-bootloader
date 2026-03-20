@@ -8,7 +8,7 @@ NASM := nasm
 OUTPUT_DIR ?= output
 
 STAGE2_SRC := main.asm
-STAGE2_BIN := $(OUTPUT_DIR)/stage2.bin
+STAGE2_BIN := $(BUILD_DIR)/stage2.o
 
 all: prepare $(STAGE2_BIN)
 
@@ -16,7 +16,7 @@ prepare:
 	mkdir -p $(OUTPUT_DIR)
 
 $(STAGE2_BIN): $(STAGE2_SRC)
-	$(NASM) -f bin $< -o $@
+	$(NASM) -f elf32 $< -o $@
 
 clean:
 	rm -f $(STAGE2_BIN)
