@@ -111,9 +111,10 @@ protected_mode:
   mov esp, 0x80000
   mov ebp, 0x80000
 
-  jmp $
+  extern stage3_start
+  jmp stage3_start
 
-section .data
+section .text.data
 ; Messages
 msg_enable_vbe db "[INFO] Enabling VBE...",0x0d,0x0a,0
 msg_enable_vbe_err db "[ERROR] Failed to enable VBE",0x0d,0x0a,0
