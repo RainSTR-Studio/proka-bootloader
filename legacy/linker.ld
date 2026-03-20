@@ -23,34 +23,15 @@ SECTIONS
     /*
      * 16-bit code section
      * Loaded (LMA) at 0x20000 (0x2000:0000)
+     * Data is also here (.text.data)
      */
-    .text16 : AT(0x20000)
+    .text : AT(0x20000)
     {
         *(.text.head)
-        *(.text)
-        *(.text.*)
-    }
-
-    /*
-     * 16-bit data section
-     * Loaded right after 16-bit code
-     */
-    .data16 : AT(0x20000 + SIZEOF(.text16))
-    {
-        *(.rodata*)
-        *(.data*)
-    }
-
-    /*
-     * 32/64-bit code section (stage3)
-     * Starts where 16-bit regions end, uses full 32-bit address
-     */
-    . = 0x20000 + SIZEOF(.text16) + SIZEOF(.data16);
-
-    .text32 : AT(ADDR(.text32))
-    {
-        *(.text32)
-        *(.text32.*)
+        *(.text*)
+	*(.rodata*)
+	*(.data*)
+	*(.bss)
     }
 
     /* Discard unused sections to avoid warnings */

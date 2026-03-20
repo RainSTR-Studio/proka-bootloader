@@ -56,43 +56,43 @@ enter_stg3:
 enable_a20:
   cli           ; disable interrupts
 
-  call  a20wait
-  mov   al,0xAD
-  out   0x64,al ; disable keyboard
+  call a20wait
+  mov al,0xAD
+  out 0x64, al ; disable keyboard
 
-  call  a20wait
-  mov   al,0xD0
-  out   0x64,al ; read controller output port
+  call a20wait
+  mov al,0xD0
+  out 0x64, al ; read controller output port
 
-  call  a20wait2
-  in    al,0x60 ; save response byte
-  push  eax
+  call a20wait2
+  in al, 0x60 ; save response byte
+  push eax
 
-  call  a20wait
-  mov   al,0xD1
-  out   0x64,al ; write next byte into controller output port
+  call a20wait
+  mov al, 0xD1
+  out 0x64, al ; write next byte into controller output port
 
-  call  a20wait
-  pop   eax
-  or    al,2    ; set A20 enable bit
-  out   0x60,al ; activate A20
+  call a20wait
+  pop eax
+  or  al, 2    ; set A20 enable bit
+  out 0x60, al ; activate A20
 
-  call  a20wait
-  mov   al,0xAE
-  out   0x64,al ; re-enable keyboard
+  call a20wait
+  mov al,0xAE
+  out 0x64, al ; re-enable keyboard
 
   ret
 
 a20wait:        ; wait input buffer clear
-  in    al,0x64
-  test  al,2
-  jnz   a20wait
+  in al, 0x64
+  test al, 2
+  jnz a20wait
   ret
 
 a20wait2:       ; wait output buffer ready
-  in    al,0x64
-  test  al,1
-  jz    a20wait2
+  in al, 0x64
+  test al, 1
+  jz a20wait2
   ret
 
 
@@ -106,15 +106,13 @@ protected_mode:
   mov gs, ax
   mov ss, ax
 
-  cld
-
   mov esp, 0x80000
   mov ebp, 0x80000
 
   extern stage3_start
   jmp stage3_start
 
-section .text.data
+section .data
 ; Messages
 msg_enable_vbe db "[INFO] Enabling VBE...",0x0d,0x0a,0
 msg_enable_vbe_err db "[ERROR] Failed to enable VBE",0x0d,0x0a,0
@@ -141,5 +139,5 @@ gdt_data:
 gdt_end:
 
 gdt_ptr:
-  dw gdt_end - gdt - 1
+  dw gdt_end - gdt
   dd gdt + 0x20000

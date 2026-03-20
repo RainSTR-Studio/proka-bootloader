@@ -42,7 +42,7 @@ print:
   pop ax
   ret
 
-section .text.data
+section .data
 msg_enter_stg2 db "[STAGE] Entered stage2",0x0d,0x0a,0
 msg_fallback_stg1 db "[ERROR] Critical error happened, falling back to stage1...",0x0d,0x0a,0
 %include "getinfo.asm"
