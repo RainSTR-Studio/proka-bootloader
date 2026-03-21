@@ -56,24 +56,8 @@ load_file:
 
     ; Calculate data area start LBA (fixed 32-bit calculation)
     pushad
-    mov  ax, BPB_CACHE_SEG
-    mov  es, ax
-
-    ; Calculate FAT count * sectors per FAT
-    movzx eax, byte [es:BPB_CACHE_OFF + 0x10]       ; Number of FATs
-    mov   ebx, [es:BPB_CACHE_OFF + 0x24]            ; Sectors per FAT
-    xor   edx, edx
-    mul   ebx                              ; eax = FATs * sectors per FAT
-
-    ; Add reserved sectors (16-bit field!)
-    movzx ecx, word [es:BPB_CACHE_OFF + 14]       ; Reserved sectors
-    add   eax, ecx
-
-    ; Add partition start LBA
-    add   eax, [es:0x7E00]                        ; Partition start LBA
-
-    ; Store final data area start LBA
-    mov   [data_start], eax
+    call fat32_calculate_data_start
+    mov   [data_start], edx
     popad
 
     ; Load root directory cluster (safe buffer)
@@ -97,85 +81,15 @@ load_file:
     call print
 %endif
 
-    ; Search for file in root directory (manual compare, no cmpsb)
-    push es
-    mov  ax, ROOT_CACHE_SEG
-    mov  es, ax
-    mov  di, ROOT_CACHE_OFF
-    mov  cx, 0xFFFF
+    ; Search file and get start cluster
     mov  si, [bp + 6]
+    call fat32_get_start_cluster
+    jc   .err_not_found
 
-.search_loop:
-    cmp  byte [es:di], 0xE5
-    je   .next_entry
-
-    mov  bx, 0
-.try_match:
-    mov  al, [ds:si + bx]
-    mov  dl, [es:di + bx]
-
-    mov  al, [ds:si + bx]
-    mov  dl, [es:di + bx]
-    cmp  al, dl
-    jne  .not_match
-
-    inc  bx
-    cmp  bx, 11
-    jb   .try_match
-
-    ; All 11 bytes matched
-    jmp  .file_found_save
-
-.not_match:
-.next_entry:
-    add  di, 32
-    loop .search_loop
-
-.err_not_found_pop:
-    pop  es
-    jmp  .err_not_found
-
-
-.file_found_save:
-    ; Save the offset of the found directory entry
-    mov  [found_dir_offset], di
-    pop  es                    ; Restore caller's ES
-    jmp  .file_found_continue
-
-.file_found_continue:
 %if FAT32_DEBUG
     mov  si, fat32_msg_found
     call print
 %endif
-
-    ; Get file start cluster using saved offset
-    push es
-    mov  ax, ROOT_CACHE_SEG
-    mov  es, ax
-    mov  di, [found_dir_offset]        ; Load saved entry offset
-
-    ; Read 28-bit starting cluster from directory entry
-    ; High 16 bits: offset 0x14, low 16 bits: offset 0x1A
-    movzx  eax, word [es:di + 0x14]  ; Get high 16 bits of cluster
-    shl  eax, 16                     ; Shift to upper half
-    movzx ebx, word [es:di + 0x1A]  ; Get low 16 bits of cluster
-    or   eax, ebx                    ; Combine into 32-bit value
-    and  eax, 0x0FFFFFFF             ; Keep only FAT32 28-bit cluster
-    mov  [file_start_cluster], eax   ; Save start cluster
-
-    ; Read file size (4 bytes at offset 0x1C)
-    mov  eax, [es:di + 0x1C]         ; Get 32-bit file length
-    mov  [file_size], eax            ; Save file size
-
-    pop  es
-    and  eax, 0x0FFFFFFF
-
-    ; Validate cluster
-    mov  eax, [file_start_cluster]
-    cmp  eax, 2                     ; clusters start at 2
-    jb   .err_bad_cluster
-    cmp  eax, 0x0FFFFFF8            ; broken cluster (below)
-    jae  .err_bad_cluster
 
 .load_file_init:
     ; Read current cluster
@@ -260,6 +174,143 @@ load_file:
     ret
 
 ; ==============================================
+; fat32_calculate_data_start
+; Calculate FAT32 data area start LBA
+; In:  BPB cached at BPB_CACHE_SEG:BPB_CACHE_OFF
+;      Partition LBA at [es:0x7E00]
+; Out: EDX = data area start LBA
+; ==============================================
+fat32_calculate_data_start:
+    push ebx
+    push ecx
+    push esi
+    push edi
+
+    mov  ax, BPB_CACHE_SEG
+    mov  es, ax
+
+    ; Calculate FAT count * sectors per FAT
+    movzx eax, byte [es:BPB_CACHE_OFF + 0x10]
+    mov   ebx, [es:BPB_CACHE_OFF + 0x24]
+    xor   edx, edx
+    mul   ebx
+
+    ; Add reserved sectors
+    movzx ecx, word [es:BPB_CACHE_OFF + 0x0E]
+    add   eax, ecx
+
+    ; Add partition start LBA
+    add   eax, [es:0x7E00]
+
+    ; Output in EDX
+    mov   edx, eax
+
+    pop edi
+    pop esi
+    pop ecx
+    pop ebx
+    ret
+
+; ==============================================
+; fat32_get_start_cluster
+; Search root directory and get file first cluster
+; In:  DS:SI = 8.3 filename (11 bytes uppercase)
+; Out: CF=0 success, EAX = start cluster
+;      CF=1 error (not found / bad cluster)
+; ==============================================
+fat32_get_start_cluster:
+    push ebx
+    push ecx
+    push edx
+    push es
+
+    ; Search for file in root directory (manual compare, no cmpsb)
+    push es
+    mov  ax, ROOT_CACHE_SEG
+    mov  es, ax
+    mov  di, ROOT_CACHE_OFF
+    mov  cx, 512
+
+.search_loop:
+    ; Deleted
+    cmp  byte [es:di], 0xE5
+    je   .next_entry
+
+    ; LFN 
+    mov  al, [es:di + 11]
+    cmp  al, 0x0F
+    je   .next_entry
+
+    mov  bx, 0
+.try_match:
+    mov  al, [ds:si + bx]
+    mov  dl, [es:di + bx]
+    cmp  al, dl
+    jne  .not_match
+
+    inc  bx
+    cmp  bx, 11
+    jb   .try_match
+
+    ; All 11 bytes matched
+    jmp  .file_found
+
+.not_match:
+.next_entry:
+    add  di, 32
+    loop .search_loop
+
+    ; Not found
+    pop  es
+    jmp  .fail
+
+.file_found:
+    ; Save the offset of the found directory entry
+    mov  [found_dir_offset], di
+    pop  es
+
+    ; Get file start cluster
+    push es
+    mov  ax, ROOT_CACHE_SEG
+    mov  es, ax
+    mov  di, [found_dir_offset]
+
+    ; High 16 bits at 0x14, low 16 bits at 0x1A
+    movzx eax, word [es:di + 0x14]
+    shl  eax, 16
+    movzx ebx, word [es:di + 0x1A]
+    or   eax, ebx
+    and  eax, 0x0FFFFFFF
+
+    ; Save to global variables
+    mov  [file_start_cluster], eax
+    mov  ecx, [es:di + 0x1C]
+    mov  [file_size], ecx
+
+    pop  es
+
+    ; Validate cluster
+    cmp  eax, 2
+    jb   .fail
+    cmp  eax, 0x0FFFFFF8
+    jae  .fail
+
+    ; Now EAX = start cluster, return it
+    clc
+    jmp  .exit
+
+.fail:
+    stc
+
+.exit:
+    pop  es
+    pop edx
+    pop ecx
+    pop ebx
+    ret
+
+
+; ==============================================
 ; fat32_load_cluster
 ; Load one cluster from FAT32
 ; In:  EAX = cluster number
@@ -275,13 +326,11 @@ fat32_load_cluster:
     sub  eax, 2
     jc   .error
 
-    push es
     push eax
     mov  ax, BPB_CACHE_SEG
     mov  fs, ax
     pop  eax
     movzx ecx, byte [fs:BPB_CACHE_OFF + 0x0D]  ; Sectors per cluster
-    pop  es 
     mul  ecx                                   ; EDX:EAX = (cluster-2)*SecPerClust
     add  eax, [data_start]
     adc  edx, 0
@@ -388,7 +437,7 @@ fat32_load_fat_to_memory:
     mov cx, FAT_CACHE_SEG
     mov es, cx
     mov bx, FAT_CACHE_OFF
-    mov cx, 2
+    mov cx, 8
     call fat32_read_lba
     pop es
 
@@ -417,9 +466,13 @@ fat32_read_lba:
     mov dword [dap + 12], 0     ; LBA high 32 bits (set to 0)
 
     ; Issue BIOS disk interrupt
+    push eax
+    xor ax, ax
+    mov fs, ax
+    pop eax
     mov si, dap
     mov ah, 0x42
-    mov dl, [0x0500]             ; Disk number stored by previous stage (e.g., stage1)
+    mov dl, [fs:0x0500]   ; Disk number stored by stage0
     int 0x13
     jc .disk_error
 

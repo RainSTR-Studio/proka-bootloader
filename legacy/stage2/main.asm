@@ -19,6 +19,7 @@ stage2_start:
   jmp get_vbe_info	; getinfo.asm
 
 section .text
+global fallback_stg1
 ; Fallback (only for failed)
 fallback_stg1:
   mov si, msg_fallback_stg1
@@ -27,6 +28,7 @@ fallback_stg1:
   mov ds, ax
   jmp 0x0000:0x8000
 
+global print
 print:
   push ax
   mov ah, 0x0e
@@ -47,4 +49,3 @@ msg_enter_stg2 db "[STAGE] Entered stage2",0x0d,0x0a,0
 msg_fallback_stg1 db "[ERROR] Critical error happened, falling back to stage1...",0x0d,0x0a,0
 %include "getinfo.asm"
 %include "prestg3.asm"
-%include "../drivers/fat32.asm"
