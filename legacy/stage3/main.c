@@ -14,4 +14,5 @@ extern void loadkrnl(void);
 void stage3_start(void) {
     *(unsigned char *)phyaddr(0x1000f0) = 0x41;
     loadkrnl();
+    while (true) {}
 }

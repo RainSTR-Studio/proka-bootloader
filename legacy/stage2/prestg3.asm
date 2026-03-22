@@ -34,15 +34,6 @@ enable_vbe:
 
 ; Ready to switch to protected mode...
 enter_stg3:
-  ; Save segment register contexts
-  mov [rm_cs], cs
-  mov [rm_ds], ds
-  mov [rm_es], es
-  mov [rm_fs], fs
-  mov [rm_gs], gs
-  mov [rm_ss], ss
-  mov [rm_sp], sp
-
   ; Disable interrupts
   cli
 
@@ -117,9 +108,6 @@ protected_mode:
   mov gs, ax
   mov ss, ax
 
-  mov esp, 0x80000
-  mov ebp, 0x80000
-
   extern stage3_start
   jmp stage3_start
 
@@ -127,24 +115,6 @@ section .data
 ; Messages
 msg_enable_vbe db "[INFO] Enabling VBE...",0x0d,0x0a,0
 msg_enable_vbe_err db "[ERROR] Failed to enable VBE",0x0d,0x0a,0
-
-; Fallback segment register values
-; Make it global to ensure stage3 can access and recover it
-global rm_cs
-global rm_ds
-global rm_es
-global rm_fs
-global rm_gs
-global rm_ss
-global rm_sp
-
-rm_cs dd 0
-rm_ds dd 0
-rm_es dd 0
-rm_fs dd 0
-rm_gs dd 0
-rm_ss dd 0
-rm_sp dd 0
 
 ; GDT 
 ; Make it to global to let stage3 access 
