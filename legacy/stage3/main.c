@@ -75,6 +75,6 @@ void init_paging(void) {
         pdt_high->entries[i].writable = 1;
         pdt_high->entries[i].huge = 1;
         pdt_high->entries[i].nx = 0;
-        pdt_high->entries[i].pfn = (i * 0x200000) >> 12;
+        pdt_high->entries[i].pfn = ((i + 1) * 0x200000) >> 12;
     }
 }

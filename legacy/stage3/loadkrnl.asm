@@ -47,7 +47,7 @@ back_protected_mode:
   ;
   ; Just copy the content from buffer to destination
   ; address!
-  mov edi, [dest_current]  ; Destination (0x100000 - 0x20000)
+  mov edi, [dest_current]  ; Destination (0x200000 - 0x20000)
   mov esi, 0x68000  ; Source (0x88000 - 0x20000)
   movzx ecx, byte [fat32_spc]
   shl ecx, 9  ; SPC x 512 = 1 cluster bytes
@@ -205,7 +205,7 @@ is_first_read db 1
 current_cluster dd 0
 complete_read db 0
 fat32_spc db 0
-dest_current dd 0xE0000
+dest_current dd 0x1E0000
 
 ; Kernel filename (8.3)
 kernel_filename db 'PROKA-~1   '
