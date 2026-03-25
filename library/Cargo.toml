@@ -5,7 +5,9 @@ edition = "2024"
 authors = ["zhangxuan2011 <zx20110412@outlook.com>"]
 
 [dependencies]
-uefi = { version = "0.35.0", features = ["global_allocator", "panic_handler"] }
+
+[lib]
+crate-type = ["rlib", "staticlib"]
 
 [profile.dev]
 panic = "abort"
