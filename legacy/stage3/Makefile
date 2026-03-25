@@ -10,7 +10,7 @@ CFLAGS = -m32 -ffreestanding -fno-pie -fno-stack-protector -fno-builtin -Wall -W
 OUTPUT_DIR ?= output
 
 STAGE3_C_SRC := main.c
-STAGE3_ASM_SRC := loadkrnl.asm
+STAGE3_ASM_SRC := loadkrnl.asm prestg4.asm
 STAGE3_C_BIN := $(BUILD_DIR)/stage3.o
 STAGE3_ASM_BIN  := $(patsubst %.asm,$(BUILD_DIR)/%.o,$(STAGE3_ASM_SRC))
 

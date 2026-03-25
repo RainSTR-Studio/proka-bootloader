@@ -1,5 +1,5 @@
 /*
- * Proka OS - The bootloader of Proka OS
+ * Proka Bootloader - The bootloader of Proka OS
  * Copyright (C) RainSTR Studio 2026, All rights reserved.
  *
  * This file defines 64-bit long mode paging structures

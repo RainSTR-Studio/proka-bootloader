@@ -8,7 +8,8 @@ LDFLAGS = -m elf_i386 -T linker.ld --oformat elf32-i386
 SHOULD_LINK := \
 	$(BUILD_DIR)/loadkrnl.o \
 	$(BUILD_DIR)/stage2.o \
-	$(BUILD_DIR)/stage3.o
+	$(BUILD_DIR)/stage3.o \
+	$(BUILD_DIR)/prestg4.o
 LINK_TARGET = $(BUILD_DIR)/pkldr.elf
 BIN_TARGET = $(OUTPUT_DIR)/pkldr
 
