@@ -1,0 +1,14 @@
+[package]
+name = "proka-bootloader"
+version = "0.1.0"
+edition = "2024"
+authors = ["zhangxuan2011 <zx20110412@outlook.com>"]
+
+[dependencies]
+uefi = { version = "0.35.0", features = ["global_allocator", "panic_handler"] }
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

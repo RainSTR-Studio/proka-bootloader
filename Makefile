@@ -15,10 +15,15 @@ uefi: prepare
 	@echo "======= BUILD UEFI ======="
 	make -C uefi
 
-clean:
+clean: clean-sub
+	make -C uefi clean
+	make -C library clean
 	rm -rf $(OUTPUT_DIR) $(BUILD_DIR)
 
 prepare:
 	mkdir -p $(OUTPUT_DIR) $(BUILD_DIR)
+	@echo "======= BUILD CORE LIBRARY ======="
+	make -C library
 
-.PHONY: all legacy uefi clean
+
+.PHONY: all legacy uefi clean clean-sub

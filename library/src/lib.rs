@@ -1,4 +1,12 @@
-//! This module provides the boot information.
+//! This crate provides the struct, enums about the Proka
+//! bootloader, including the boot information, and so on.
+//! 
+//! # About proka bootloader
+//! Well, this bootloader is for Proka Kernel, which will obey
+//! its standard. For more information, see <url>.
+
+#![no_std]
+#![no_main]
 
 /// This struct is the boot information struct, which provides
 /// the basic information, *memory map*, and so on.

@@ -1,2 +1,2 @@
-# Added by cargo
+# Ignore built directory
 target/*

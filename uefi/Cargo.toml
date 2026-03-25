@@ -1,14 +1,9 @@
 [package]
-name = "proka_bootloader"
+name = "pkbl-uefi"
 version = "0.1.0"
 edition = "2024"
-authors = ["zhangxuan2011 <zx20110412@outlook.com>"]
+publish = false
 
 [dependencies]
-uefi = { version = "0.35.0", features = ["global_allocator", "panic_handler"] }
-
-[profile.dev]
-panic = "abort"
-
-[profile.release]
-panic = "abort"
+uefi = { version = "0.35", features = ["alloc", "panic_handler"] }
+proka-bootloader = { path = "../library" }

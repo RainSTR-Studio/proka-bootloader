@@ -2,7 +2,7 @@
 #![no_std]
 #![no_main]
 
-use proka_bootloader::boot::BootInfo;
+use proka_bootloader::BootInfo;
 use uefi::prelude::*;
 
 #[entry]

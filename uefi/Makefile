@@ -1,20 +1,19 @@
-# The UEFI part bootloader builder
+# Proka Bootloader - The bootloader for Proka OS
+# Copyright (C) RainSTR Studio 2026, All Rights Reserved.
+#
+# This is the UEFI part bootloader builder, which will build
+# the UEFI part of loader.
 
 OUTPUT_DIR ?= build
 
 all:
-	@echo "Building UEFI part (release mode)..."
+	@echo "[INFO] Building UEFI..."
 	cargo build --release --target x86_64-unknown-uefi
-	@echo "Copying built target to output directories..."
-	cp target/x86_64-unknown-uefi/release/proka_bootloader.efi $(OUTPUT_DIR)
+	@echo "[INFO] Copying built target to output directories..."
+	cp target/x86_64-unknown-uefi/release/pkbl-uefi.efi $(OUTPUT_DIR)
 
 clean:
-	@echo "Cleaning UEFI Build targets..."
+	@echo "[INFO] Cleaning UEFI Build targets..."
 	cargo clean
 
-debug:
-	@echo "Building UEFI part (debug mode)..."
-	cargo build --target x86_64-unknown-uefi
-	# No need copy if in debug mode...
-
-.PHONY: all clean debug
+.PHONY: all clean
