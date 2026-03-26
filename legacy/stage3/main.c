@@ -7,7 +7,6 @@
 #include "paging.h"
 #include <stdbool.h>
 #include <stdint.h>
-#define phyaddr(x) ((x) - 0x20000)
 
 // Externs
 extern void loadkrnl(void);
@@ -20,14 +19,15 @@ extern void prepare_sg4(void);
 #define PDT_LOW_PADDR 0x43000
 #define PDT_HIGH_PADDR 0x44000
 
-PML4 *pml4 = (PML4 *)phyaddr(PML4_PADDR);
-PDPT *pdpt_low = (PDPT *)phyaddr(PDPT_LOW_PADDR);
-PDPT *pdpt_high = (PDPT *)phyaddr(PDPT_HIGH_PADDR);
-PDT *pdt_low = (PDT *)phyaddr(PDT_LOW_PADDR);
-PDT *pdt_high = (PDT *)phyaddr(PDT_HIGH_PADDR);
+PML4 *pml4 = (PML4 *)PML4_PADDR;
+PDPT *pdpt_low = (PDPT *)PDPT_LOW_PADDR;
+PDPT *pdpt_high = (PDPT *)PDPT_HIGH_PADDR;
+PDT *pdt_low = (PDT *)PDT_LOW_PADDR;
+PDT *pdt_high = (PDT *)PDT_HIGH_PADDR;
 
 // Stage3 main entry point
 void stage3_start(void) {
+    *(unsigned int *)0x100000 = 0x41;
     // Invoke the load kernel in assembly
     loadkrnl();
 

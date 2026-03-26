@@ -4,7 +4,7 @@
 ; This file is will prepare for stage3, and load 
 ; The C code
 
-section .text
+section .text16
 enable_vbe:
   mov si, msg_enable_vbe
   call print
@@ -97,7 +97,7 @@ a20wait2:       ; wait output buffer ready
   jz a20wait2
   ret
 
-
+section .text
 [bits 32]
 protected_mode:
   ; Set up segment
@@ -111,7 +111,7 @@ protected_mode:
   extern stage3_start
   jmp stage3_start
 
-section .data
+section .data16
 ; Messages
 msg_enable_vbe db "[INFO] Enabling VBE...",0x0d,0x0a,0
 msg_enable_vbe_err db "[ERROR] Failed to enable VBE",0x0d,0x0a,0
@@ -129,28 +129,28 @@ gdt_null:
 gdt_code32:
   dw 0xFFFF
   dw 0 
-  db 0x02
+  db 0x00
   db 0b10011010
   db 0b11001111
   db 0 
 gdt_data32:
   dw 0xFFFF
   dw 0 
-  db 0x02
+  db 0x00
   db 0b10010010
   db 0b11001111
   db 0 
 gdt_code16:
   dw 0xFFFF
   dw 0 
-  db 0x02 
+  db 0x02
   db 0b10011010
   db 0b00000000
   db 0 
 gdt_data16:
   dw 0xFFFF
   dw 0 
-  db 0x02 
+  db 0x02
   db 0b10010010
   db 0b00000000
   db 0

@@ -6,7 +6,7 @@
 
 [bits 16]	; Still real mode :/
 
-section .text.head
+section .text16.head
 global stage2_start
 stage2_start:
   ; Set up segment
@@ -18,7 +18,7 @@ stage2_start:
   call print
   jmp get_vbe_info	; getinfo.asm
 
-section .text
+section .text16
 global fallback_stg1
 ; Fallback (only for failed)
 fallback_stg1:
@@ -44,7 +44,7 @@ print:
   pop ax
   ret
 
-section .data
+section .data16
 msg_enter_stg2 db "[STAGE] Entered stage2",0x0d,0x0a,0
 msg_fallback_stg1 db "[ERROR] Critical error happened, falling back to stage1...",0x0d,0x0a,0
 %include "getinfo.asm"

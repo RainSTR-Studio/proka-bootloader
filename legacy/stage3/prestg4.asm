@@ -37,7 +37,7 @@ prepare_sg4:
   mov cr0, eax
 
   ; Jump to long mode!
-  jmp gdt64.code:long_mode + 0x20000
+  jmp gdt64.code:long_mode
 
 [bits 64]
 long_mode:
@@ -58,4 +58,4 @@ gdt64:
     dq (1<<43) | (1<<44) | (1<<47) | (1<<53)
 .pointer:
     dw $ - gdt64 - 1
-    dq gdt64 + 0x20000
+    dq gdt64

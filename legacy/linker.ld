@@ -1,43 +1,54 @@
 /*
- * Proka Bootloader
+ * Proka Bootloader 
  * Linker Script for 16-bit stage2 and 32/64-bit stage3
- * Copyright (C) RainSTR Studio 2026, All Rights Reserved.
+ * Copyright (C) RainSTR Studio 2026, All Rights Reserved.     
  *
- * This script separates 16-bit real-mode code and data
- * with VMA = 0 (to fit 16-bit offsets) and LMA = 0x20000
- * (loaded to 0x2000:0000). 32-bit code is placed above
- * the 16-bit region with full 32-bit addressing.
- */
+ * This script separates 16-bit real-mode code (VMA=0)
+ * from 32/64-bit protected mode code (VMA=0x20000)
+ * All code is loaded contiguously starting at 0x20000.
+ */ 
 
-OUTPUT_FORMAT(elf32-i386)
+OUTPUT_FORMAT(elf32-i386)  
 ENTRY(stage2_start)
 
 SECTIONS
 {
     /*
-     * Base for 16-bit code: VMA starts at 0
-     * to ensure all offsets fit in 16 bits.
-     */
-    . = 0x0;
-
-    /*
-     * 16-bit code section
+     * 16-bit code and data: VMA starts at 0 to fit 16-bit offsets
      * Loaded (LMA) at 0x20000 (0x2000:0000)
-     * Data is also here (.text.data)
+     * Contains all 16-bit related code and data
      */
-    .text : AT(0x20000)
+    .text16 0x0 : AT(0x20000)
     {
-        *(.text.head)
-        *(.text*)
-	*(.rodata*)
-	*(.data*)
-	*(.bss)
+        *(.text16.head)
+        *(.text16*)
+        *(.rodata16*)
+        *(.data16*)
+        *(.bss16*)
     }
-
+    
+    /*
+     * 32/64-bit code and data: VMA starts at 0x20000 to match LMA
+     * This prevents the linker from adding base offset to symbols
+     * Loaded immediately after the 16-bit section
+     */
+    .text 0x20000 + SIZEOF(.text16) : AT(0x20000 + SIZEOF(.text16))
+    {
+        *(.text*)
+        *(.rodata*)
+        *(.data*)
+        *(.bss)
+    }
+    
+    /* Align to page boundary for cleaner loading */
+    . = ALIGN(0x1000);
+    
     /* Discard unused sections to avoid warnings */
     /DISCARD/ :
     {
         *(.comment)
         *(.note.gnu.property)
+        *(.eh_frame)
+        *(.eh_frame_hdr)
     }
 }

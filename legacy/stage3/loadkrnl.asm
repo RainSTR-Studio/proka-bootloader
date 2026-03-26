@@ -47,19 +47,19 @@ back_protected_mode:
   ;
   ; Just copy the content from buffer to destination
   ; address!
-  mov edi, [dest_current]  ; Destination (0x200000 - 0x20000)
-  mov esi, 0x68000  ; Source (0x88000 - 0x20000)
-  movzx ecx, byte [fat32_spc]
+  mov edi, [dest_current + 0x20000]  ; Destination (0x200000)
+  mov esi, 0x88000  ; Source (0x88000)
+  movzx ecx, byte [fat32_spc + 0x20000]
   shl ecx, 9  ; SPC x 512 = 1 cluster bytes
 
   ; Copy!
   cld 
   rep movsb
   add edi, ecx
-  mov [dest_current], edi
+  mov [dest_current + 0x20000], edi
 
   ; Check is it completed reading
-  cmp byte [complete_read], 1 
+  cmp byte [complete_read + 0x20000], 1 
   je  .done
 
   jmp switch_real_load_file
@@ -68,6 +68,7 @@ back_protected_mode:
   ret
 
 ; ===== 16-bit area =====
+section .text16
 [bits 16]
 prot16_entry:
   ; Set to 16-bit data
@@ -199,13 +200,13 @@ switch_prot_copy_file:
 %include "../drivers/fat32.asm"
 
 ; ======= Data section =======
-section .data
+section .data16
 ; Variables
 is_first_read db 1
 current_cluster dd 0
 complete_read db 0
 fat32_spc db 0
-dest_current dd 0x1E0000
+dest_current dd 0x200000
 
 ; Kernel filename (8.3)
 kernel_filename db 'PROKA-~1   '
