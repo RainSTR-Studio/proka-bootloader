@@ -1,0 +1,18 @@
+[package]
+name = "pkbl-legacy-stage4"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+proka-bootloader = { version = "0.1.0", path = "../../library", features = ["loader_main"] }
+
+[lib]
+name = "stage4"
+crate-type = ["staticlib", "rlib"]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

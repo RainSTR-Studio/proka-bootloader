@@ -13,11 +13,11 @@ extern void loadkrnl(void);
 extern void prepare_sg4(void);
 
 // Page tables placed at fixed physical addresses (4K aligned)
-#define PML4_PADDR 0x40000
-#define PDPT_LOW_PADDR 0x41000
-#define PDPT_HIGH_PADDR 0x42000
-#define PDT_LOW_PADDR 0x43000
-#define PDT_HIGH_PADDR 0x44000
+#define PML4_PADDR 0x60000
+#define PDPT_LOW_PADDR 0x61000
+#define PDPT_HIGH_PADDR 0x62000
+#define PDT_LOW_PADDR 0x63000
+#define PDT_HIGH_PADDR 0x64000
 
 PML4 *pml4 = (PML4 *)PML4_PADDR;
 PDPT *pdpt_low = (PDPT *)PDPT_LOW_PADDR;

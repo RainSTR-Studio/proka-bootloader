@@ -6,11 +6,16 @@ authors = ["zhangxuan2011 <zx20110412@outlook.com>"]
 
 [dependencies]
 
-[lib]
-crate-type = ["rlib", "staticlib"]
+[features]
+default = []
+loader_main = []
 
 [profile.dev]
 panic = "abort"
 
 [profile.release]
+opt-level = "z"
+lto = true
+strip = "debuginfo"
+codegen-units = 1
 panic = "abort"

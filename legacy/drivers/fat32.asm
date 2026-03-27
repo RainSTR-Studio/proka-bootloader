@@ -343,6 +343,14 @@ fat32_load_cluster:
     ; Update next addr and return
     shl cx, 9
     add bx, cx
+    jnc .return
+
+    push ax
+    mov ax, es
+    add ax, 0x1000
+    mov es, ax
+    pop ax
+    mov bx, 0
 
 .return:
     clc

@@ -8,6 +8,9 @@
 #![no_std]
 #![no_main]
 
+#[cfg(feature = "loader_main")]
+pub mod loader_main;
+
 // Panic handler
 use core::panic::PanicInfo;
 

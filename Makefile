@@ -7,7 +7,7 @@ export OUTPUT_DIR
 all: legacy uefi
 	@echo "[INFO] All platforms' bootloader file are built successfully!"
 
-legacy: clean prepare
+legacy: prepare
 	@echo "======= BUILD LEGACY ======="
 	make -C legacy
 
@@ -17,13 +17,11 @@ uefi: prepare
 
 clean: clean-sub
 	make -C uefi clean
-	make -C library clean
+	make -C legacy/stage4 clean
 	rm -rf $(OUTPUT_DIR) $(BUILD_DIR)
+	@echo "[INFO] Cleaning up process completed."
 
 prepare:
 	mkdir -p $(OUTPUT_DIR) $(BUILD_DIR)
-	@echo "======= BUILD CORE LIBRARY ======="
-	make -C library
-
 
 .PHONY: all legacy uefi clean clean-sub

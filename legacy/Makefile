@@ -3,13 +3,16 @@
 #
 # Builds all boot components and creates a plain concatenated disk image.
 
-SUBDIRS := boot stage2 stage3
-LDFLAGS = -m elf_i386 -T linker.ld --oformat elf32-i386
+SUBDIRS := boot stage2 stage3 stage4
+LDFLAGS = -m elf_i386 -T linker.ld \
+	  --oformat elf32-i386 \
+	  --accept-unknown-input-arch
 SHOULD_LINK := \
 	$(BUILD_DIR)/loadkrnl.o \
 	$(BUILD_DIR)/stage2.o \
 	$(BUILD_DIR)/stage3.o \
-	$(BUILD_DIR)/prestg4.o
+	$(BUILD_DIR)/prestg4.o \
+	$(BUILD_DIR)/stage4.a
 LINK_TARGET = $(BUILD_DIR)/pkldr.elf
 BIN_TARGET = $(OUTPUT_DIR)/pkldr
 

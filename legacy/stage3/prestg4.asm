@@ -13,11 +13,9 @@ section .text
 global prepare_sg4
 prepare_sg4:
   ; Now ready to enable long mode
-  ; Load GDT
-  lgdt [gdt64.pointer]
 
   ; Setup page table
-  mov eax, 0x40000  ; Hard-coded in C
+  mov eax, 0x60000  ; Hard-coded in C
   mov cr3, eax
 
   ; Enable CR4.PAE 
@@ -37,25 +35,15 @@ prepare_sg4:
   mov cr0, eax
 
   ; Jump to long mode!
-  jmp gdt64.code:long_mode
+  jmp .flush
 
-[bits 64]
-long_mode:
-  mov ax, 0
+extern stage4_entry
+.flush:
+  mov ax, 0x10
   mov ds, ax
   mov es, ax
   mov fs, ax
   mov gs, ax
   mov ss, ax
 
-  hlt
-  jmp $
-
-section .rodata
-gdt64:
-    dq 0 ; zero entry
-.code: equ $ - gdt64 ; new
-    dq (1<<43) | (1<<44) | (1<<47) | (1<<53)
-.pointer:
-    dw $ - gdt64 - 1
-    dq gdt64
+  jmp stage4_entry
