@@ -445,7 +445,7 @@ fat32_load_fat_to_memory:
     mov cx, FAT_CACHE_SEG
     mov es, cx
     mov bx, FAT_CACHE_OFF
-    mov cx, 16
+    mov cx, 32
     call fat32_read_lba
     pop es
 

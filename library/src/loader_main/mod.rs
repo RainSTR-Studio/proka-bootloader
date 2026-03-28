@@ -6,27 +6,96 @@
 
 mod memory;
 mod output;
+mod gdt;
 use self::memory::E820Map;
 use self::output::VBEInfo;
+use self::gdt::GdtPtr;
+use core::arch::asm;
 use crate::memory::{MemoryEntry, MemoryMap, MemoryType};
 use crate::output::Framebuffer;
+use crate::{BootMode, BootInfo};
+
+/// The GDT structures.
+#[used]
+static GDT: [u64; 2] = [
+    // Empty entry
+    0,
+    // The code segment
+    (1<<43) | (1<<44) | (1<<47) | (1<<53) | (0<<22)
+];
+
+/// The GDT pointer.
+#[used]
+static mut GDT_PTR: GdtPtr = GdtPtr {
+    limit: 17,
+    base: 0     // Will change in runtime
+};
 
 /// This function is the generic main entry of the whole
 /// bootloader, which will intergrate all infomation that
 /// kernel needed, and jump to kernel finally.
 ///
 /// You need to pass one argument, which references to
-/// the boot mode, only 0 and 1 are legal
-///
-/// About this, 0 = Legacy mode, 1 = UEFI mode.
-pub fn loader_main(bootmode: u8) -> ! {
-    // Announce the global variable in this func.
+/// the boot mode, only Legacy and Uefi are legal
+pub fn loader_main(bootmode: BootMode) -> ! {
+    // Get the essential information
     let framebuffer = get_framebuffer();
     let memory_map = get_memory_map();
 
+    // Intergrate them into a BootInfo struct
+    let boot_info = BootInfo::new(bootmode, memory_map, framebuffer);
+
+    let kernel_start: u32 = 0;
+
+    // Jump to kernel
+    #[cfg(target_os = "none")]
     unsafe {
-        let ptr = 0x100000 as *mut MemoryMap;
-        *ptr = memory_map;
+        // Update GDT_PTR
+        GDT_PTR.base = GDT.as_ptr() as u64;
+        asm!(
+            "lgdt [{0}]",
+            in(reg) &raw const GDT_PTR,
+            options(nomem, nostack)
+        );
+        asm!(
+            "and esp, 0xFFFFFF00",
+            in("ebx") &boot_info
+        );
+        asm!(
+            "push ebx",
+            "push 0xffff8000",
+            "push {entry:e}",
+            entry = in(reg) kernel_start
+        );
+        asm!(
+            "ljmp $0x8, $2f", "2:",
+            options(att_syntax)
+        );
+        asm!(
+            ".code64",
+
+            // Refresh segment registers
+            "mov {0}, 0",
+            "mov ds, {0}",
+            "mov es, {0}",
+            "mov ss, {0}",
+
+            // Set up the last work
+            "pop rax",
+            "pop rdi",
+
+            // Finally, the work are fully completed.
+            //
+            // The bootloader's mission has done, and
+            // the next step is for kernel.
+            //
+            // Anyway, see you in my kernel :)
+            "jmp rax",
+
+            out(reg) _,
+            out("rax") _,
+            out("rdi") _,
+        );
     }
 
     loop {}

@@ -5,6 +5,7 @@
 /// The generic Memory Map, which can contains 256 memory map
 /// entries.
 #[repr(C, packed)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MemoryMap {
     /// Available counts
     pub count: u32,
@@ -15,7 +16,7 @@ pub struct MemoryMap {
 
 /// The memory entry.
 #[repr(C, packed)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MemoryEntry {
     /// The memory region start address
     pub base_addr: u64,

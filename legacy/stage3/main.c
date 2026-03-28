@@ -34,7 +34,6 @@ void stage3_start(void) {
 
     // Get the VBE phys addr
     uint32_t fb_phys = *(uint32_t*)(0x10000 + 0x28);
-    *(uint32_t *)fb_phys = 0xFFFFFFFF;
 
     // And paging initializator
     init_paging(fb_phys);

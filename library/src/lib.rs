@@ -12,6 +12,8 @@
 pub mod loader_main;
 pub mod output;
 pub mod memory;
+use self::output::Framebuffer;
+use self::memory::MemoryMap;
 
 // Panic handler
 use core::panic::PanicInfo;
@@ -24,16 +26,28 @@ fn panic(_info: &PanicInfo) -> ! {
 /// This struct is the boot information struct, which provides
 /// the basic information, *memory map*, and so on.
 #[repr(C, align(4))]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BootInfo {
     /// The boot mode, see the [`BootMode`] enum.
     boot_mode: BootMode,
+    memmap: MemoryMap,
+    framebuffer: Framebuffer,
+    
 }
 
 impl BootInfo {
     /// Initialize a new boot info object.
-    pub fn new(boot_mode: BootMode) -> Self {
-        Self { boot_mode }
+    ///
+    /// Note: this object will be initialized by loader
+    /// automatically, so if you are a kernel developer, do
+    /// not use this method, because you needn't and unusable.
+    #[cfg(feature = "loader_main")]
+    pub fn new(boot_mode: BootMode, memmap: MemoryMap, fb: Framebuffer) -> Self {
+        Self {
+            boot_mode,
+            memmap,
+            framebuffer: fb
+        }
     }
 
     /// Put the boot information to a fixed address
@@ -63,6 +77,16 @@ impl BootInfo {
     /// Get the boot mode.
     pub const fn boot_mode(&self) -> &BootMode {
         &self.boot_mode
+    }
+
+    /// Get the framebuffer info.
+    pub const fn framebuffer(&self) -> &Framebuffer {
+        &self.framebuffer
+    }
+
+    /// Get the memory map.
+    pub const fn memory(&self) -> &MemoryMap {
+        &self.memmap
     }
 }
 

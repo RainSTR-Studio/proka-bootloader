@@ -12,7 +12,7 @@
 ///
 /// You can use it to do output/graphics operations.
 #[repr(C)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Framebuffer {
     fb_addr: u64,
     width: u32,

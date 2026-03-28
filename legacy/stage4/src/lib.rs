@@ -8,12 +8,13 @@
 #![no_main]
 
 use proka_bootloader::loader_main::loader_main;
+use proka_bootloader::BootMode;
 
 #[unsafe(no_mangle)]
 pub fn stage4_entry() -> ! {
     // From here, you are in Rust code.
     //
     // The loader_main needs an arg, which shows the 
-    // boot mode, 0 = Legacy, 1 = UEFI
-    loader_main(0)
+    // boot mode, see also proka_bootloader::BootMode.
+    loader_main(BootMode::Legacy)
 }
