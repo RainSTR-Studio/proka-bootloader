@@ -10,6 +10,8 @@
 
 #[cfg(feature = "loader_main")]
 pub mod loader_main;
+pub mod output;
+pub mod memory;
 
 // Panic handler
 use core::panic::PanicInfo;

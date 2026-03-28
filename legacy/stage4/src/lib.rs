@@ -10,7 +10,7 @@
 use proka_bootloader::loader_main::loader_main;
 
 #[unsafe(no_mangle)]
-pub extern "C" fn stage4_entry() -> ! {
+pub fn stage4_entry() -> ! {
     // From here, you are in Rust code.
     //
     // The loader_main needs an arg, which shows the 

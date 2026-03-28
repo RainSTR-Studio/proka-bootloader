@@ -1,27 +1,3 @@
-//! This module is the loader entry, which is used for 
-//! Proka Bootloader only
-//!
-//! So if you are using this crate by kernel, do not
-//! enable this feature and trying importing this module.
-
-/// This function is the generic main entry of the whole
-/// bootloader, which will intergrate all infomation that
-/// kernel needed, and jump to kernel finally.
-///
-/// You need to pass one argument, which references to 
-/// the boot mode, only 0 and 1 are legal
-///
-/// About this, 0 = Legacy mode, 1 = UEFI mode.
-pub fn loader_main(bootmode: u8) -> ! {
-    // Get the VBE info first
-    unsafe {
-        let vbe = VBEInfo::load(0x10000);   // Put in fixed address in stage2
-        let ptr = 0x100000 as *mut VBEInfo;
-        *ptr = *vbe;
-    }
-    loop {}
-}
-
 /// Mandatory information for all VBE revisions
 #[repr(C, packed)]
 #[derive(Debug, Clone, Copy)]
@@ -78,8 +54,6 @@ pub struct VBEInfo {
 impl VBEInfo {
     /// Load the VBE info from a fixed address.
     pub fn load(addr: u32) -> &'static Self {
-        unsafe {
-            &*(addr as *const Self)
-        }
+        unsafe { &*(addr as *const Self) }
     }
 }

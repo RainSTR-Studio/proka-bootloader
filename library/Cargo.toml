@@ -4,8 +4,6 @@ version = "0.1.0"
 edition = "2024"
 authors = ["zhangxuan2011 <zx20110412@outlook.com>"]
 
-[dependencies]
-
 [features]
 default = []
 loader_main = []

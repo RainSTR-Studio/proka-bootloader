@@ -15,4 +15,8 @@ crate-type = ["staticlib", "rlib"]
 panic = "abort"
 
 [profile.release]
+opt-level = "z"
+lto = true
+strip = "debuginfo"
+codegen-units = 1
 panic = "abort"

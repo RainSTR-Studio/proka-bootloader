@@ -55,7 +55,6 @@ back_protected_mode:
   ; Copy!
   cld 
   rep movsb
-  add edi, ecx
   mov [dest_current + 0x20000], edi
 
   ; Check is it completed reading
