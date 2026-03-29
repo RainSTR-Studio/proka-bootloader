@@ -7,10 +7,11 @@ NASM := nasm
 
 BUILD_DIR ?= build
 LIB_FILE := target/i686-unknown-none/release/libstage4.a
+RUSTFLAGS := --release --target i686-unknown-none.json
 
 all:
 	@echo "[INFO] Building stage4 code in release..."
-	cargo build --release --target i686-unknown-none.json
+	cargo build $(RUSTFLAGS)
 	@echo "[INFO] Copying the lib file to build dir..."
 	cp $(LIB_FILE) $(BUILD_DIR)/stage4.a
 

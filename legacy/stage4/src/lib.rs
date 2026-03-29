@@ -10,6 +10,14 @@
 use proka_bootloader::loader_main::loader_main;
 use proka_bootloader::BootMode;
 
+// Panic handler
+use core::panic::PanicInfo;
+
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
+}
+
 #[unsafe(no_mangle)]
 pub fn stage4_entry() -> ! {
     // From here, you are in Rust code.

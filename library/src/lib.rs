@@ -15,14 +15,6 @@ pub mod memory;
 use self::output::Framebuffer;
 use self::memory::MemoryMap;
 
-// Panic handler
-use core::panic::PanicInfo;
-
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
-}
-
 /// This struct is the boot information struct, which provides
 /// the basic information, *memory map*, and so on.
 #[repr(C, align(4))]

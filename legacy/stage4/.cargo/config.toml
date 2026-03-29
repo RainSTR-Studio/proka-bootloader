@@ -3,3 +3,4 @@ target = "i686-unknown-none.json"
 
 [unstable]
 build-std = ["core", "alloc", "compiler_builtins"]
+json-target-spec = true
