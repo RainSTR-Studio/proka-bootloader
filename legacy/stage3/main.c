@@ -44,23 +44,27 @@ void stage3_start(void) {
 
 void init_paging(uint32_t fb_phys) {
     // Write the PML4 table
+    pml4->entries[0].value = 0;
     pml4->entries[0].present = 1;
     pml4->entries[0].writable = 1;
     pml4->entries[0].nx = 0;
     pml4->entries[0].pfn = PDPT_LOW_PADDR >> 12;
 
+    pml4->entries[256].value = 0;
     pml4->entries[256].present = 1;
     pml4->entries[256].writable = 1;
     pml4->entries[256].nx = 0;
     pml4->entries[256].pfn = PDPT_HIGH_PADDR >> 12;
 
     // Write the low PDPT table
+    pdpt_low->entries[0].value = 0;
     pdpt_low->entries[0].present = 1;
     pdpt_low->entries[0].writable = 1;
     pdpt_low->entries[0].nx = 0;
     pdpt_low->entries[0].pfn = PDT_LOW_PADDR >> 12;
 
     // Write the low PDT table (0x20000~0x21FFFF)
+    pdt_low->entries[0].value = 0;
     pdt_low->entries[0].present = 1;
     pdt_low->entries[0].writable = 1;
     pdt_low->entries[0].huge = 1;
@@ -68,18 +72,21 @@ void init_paging(uint32_t fb_phys) {
     pdt_low->entries[0].pfn = 0 >> 12; // PA=0x20000
 
     // Write the high PDPT table
+    pdpt_high->entries[0].value = 0;
     pdpt_high->entries[0].present = 1;
     pdpt_high->entries[0].writable = 1;
     pdpt_high->entries[0].nx = 0;
     pdpt_high->entries[0].pfn = PDT_HIGH_PADDR >> 12;
-    
+   
+    pdpt_high->entries[1].value = 0; 
     pdpt_high->entries[1].present = 1;
     pdpt_high->entries[1].writable = 1;
-    pdpt_high->entries[1].nx = 1; // Framebuffer is not execitable
+    pdpt_high->entries[1].nx = 0;
     pdpt_high->entries[1].pfn = PDT_FB_PADDR >> 12;
     
     // Write the high PDT table (128MiB, 64 entries)
     for (uint64_t i = 0; i < 64; i++) {
+	pdt_high->entries[i].value = 0;
         pdt_high->entries[i].present = 1;
         pdt_high->entries[i].writable = 1;
         pdt_high->entries[i].huge = 1;
@@ -89,11 +96,10 @@ void init_paging(uint32_t fb_phys) {
 
     // Map framebuffer address (4MB)
     for (uint64_t i = 0; i < 2; i++) {
+	pdt_fb->entries[i].value = 0;
         pdt_fb->entries[i].present = 1;
         pdt_fb->entries[i].writable = 1;
         pdt_fb->entries[i].huge = 1;
-        pdt_fb->entries[i].nx = 1;
-        pdt_fb->entries[i].cache_disable = 1;
         pdt_fb->entries[i].pfn = (fb_phys + i * 0x200000) >> 12;
     }
 }

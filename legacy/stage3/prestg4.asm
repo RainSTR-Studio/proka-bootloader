@@ -46,4 +46,7 @@ extern stage4_entry
   mov gs, ax
   mov ss, ax
 
+  mov esp, 0x1F0000
+  mov ebp, esp
+
   jmp stage4_entry
