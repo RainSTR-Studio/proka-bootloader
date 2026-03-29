@@ -13,6 +13,7 @@
 /// You can use it to do output/graphics operations.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "default", derive(Default))]
 pub struct Framebuffer {
     fb_addr: u64,
     width: u32,

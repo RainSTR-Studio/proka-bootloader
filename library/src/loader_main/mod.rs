@@ -128,7 +128,7 @@ fn get_memory_map() -> MemoryMap {
             base_addr: 0,
             length: 0,
             mem_type: MemoryType::Reserved,
-        }; 256],
+        }; 128],
     };
 
     // Get valid entries as slice

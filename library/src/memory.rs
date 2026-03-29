@@ -2,7 +2,7 @@
 //! kernel, so that kernel can know the memory structure 
 //! easily.
 
-/// The generic Memory Map, which can contains 256 memory map
+/// The generic Memory Map, which can contains 128 memory map
 /// entries.
 #[repr(C, packed)]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -11,7 +11,7 @@ pub struct MemoryMap {
     pub count: u32,
 
     /// Total entries
-    pub entries: [MemoryEntry; 256],
+    pub entries: [MemoryEntry; 128],
 }
 
 /// The memory entry.
