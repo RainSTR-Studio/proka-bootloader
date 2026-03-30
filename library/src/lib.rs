@@ -17,7 +17,7 @@ use self::memory::MemoryMap;
 
 /// This struct is the boot information struct, which provides
 /// the basic information, *memory map*, and so on.
-#[repr(C, align(4))]
+#[repr(C)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BootInfo {
     /// The boot mode, see the [`BootMode`] enum.
@@ -39,30 +39,6 @@ impl BootInfo {
             boot_mode,
             memmap,
             framebuffer: fb
-        }
-    }
-
-    /// Put the boot information to a fixed address
-    ///
-    /// # Safety
-    /// This is unsafe because we need to operate the pointer.
-    ///
-    /// This function is for loader only.
-    pub unsafe fn put_addr(self, address: u64) {
-        let pointer = address as *mut BootInfo;
-        unsafe {
-            pointer.write_volatile(self);
-        }
-    }
-
-    /// Load the boot infomation from an address.
-    ///
-    /// # Safety
-    /// This is unsafe because we need to read from a pointer.
-    pub unsafe fn load(address: u64) -> Self {
-        let pointer = address as *const BootInfo;
-        unsafe {
-            pointer.read_volatile()
         }
     }
 

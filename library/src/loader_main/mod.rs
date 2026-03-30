@@ -17,17 +17,19 @@ use crate::{BootMode, BootInfo};
 
 /// The GDT structures.
 #[used]
-static GDT: [u64; 2] = [
+static GDT: [u64; 3] = [
     // Empty entry
     0,
     // The code segment
-    (1<<43) | (1<<44) | (1<<47) | (1<<53) | (0<<22)
+    (1<<43) | (1<<44) | (1<<47) | (1<<53) | (0<<22),
+    // The data segment
+    (1<<44) | (1<<47) | (1<<41) | (1<<53) | (1<<55)
 ];
 
 /// The GDT pointer.
 #[used]
 static mut GDT_PTR: GdtPtr = GdtPtr {
-    limit: 17,
+    limit: 25,
     base: 0     // Will change in runtime
 };
 
@@ -75,10 +77,12 @@ pub fn loader_main(bootmode: BootMode) -> ! {
             ".code64",
 
             // Refresh segment registers
-            "mov {0}, 0",
+            "mov {0}, 0x10",
             "mov ds, {0}",
             "mov es, {0}",
             "mov ss, {0}",
+            "mov fs, {0}",
+            "mov gs, {0}",
 
             // Set up the last work
             "pop rax",
