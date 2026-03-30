@@ -5,7 +5,7 @@
 /// The generic Memory Map, which can contains 128 memory map
 /// entries.
 #[repr(C, packed)]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MemoryMap {
     /// Available counts
     pub count: u32,

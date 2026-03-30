@@ -11,7 +11,7 @@
 /// - Framebuffer pitch
 ///
 /// You can use it to do output/graphics operations.
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "default", derive(Default))]
 pub struct Framebuffer {

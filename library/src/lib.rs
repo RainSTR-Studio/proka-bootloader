@@ -17,14 +17,13 @@ use self::memory::MemoryMap;
 
 /// This struct is the boot information struct, which provides
 /// the basic information, *memory map*, and so on.
-#[repr(C)]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(C, align(8))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BootInfo {
     /// The boot mode, see the [`BootMode`] enum.
     boot_mode: BootMode,
     memmap: MemoryMap,
     framebuffer: Framebuffer,
-    
 }
 
 impl BootInfo {
