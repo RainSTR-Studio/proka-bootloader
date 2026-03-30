@@ -11,4 +11,4 @@ dependencies = [
 
 [[package]]
 name = "proka-bootloader"
-version = "0.1.4"
+version = "0.1.5"
