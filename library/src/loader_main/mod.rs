@@ -112,7 +112,7 @@ fn get_framebuffer() -> Framebuffer {
     let fb_addr: u64 = 0xffff800040000000; // Mapped
     let width: u32 = vbe.x_resolution.into();
     let height: u32 = vbe.y_resolution.into();
-    let bpp = vbe.bits_per_pixel;
+    let bpp = vbe.bits_per_pixel / 8;
     let pitch = vbe.bytes_per_scan_line;
 
     // Init the framebuffer struct
