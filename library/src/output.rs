@@ -2,7 +2,7 @@
 //! its utilities.
 
 /// The framebuffer structure, which provides basic 5
-/// elements:
+/// elements.
 ///
 /// - Framebuffer base address;
 /// - Framebuffer height;
@@ -11,11 +11,15 @@
 /// - Framebuffer pitch
 ///
 /// You can use it to do output/graphics operations.
+///
+/// If you want to compute the offset, you can use this:
+///
+/// `offset = x * bpp + y * pitch`
 #[repr(C, packed)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "default", derive(Default))]
 pub struct Framebuffer {
-    fb_addr: u64,
+    fb_addr: *mut u8,
     width: u32,
     height: u32,
     bpp: u8,
@@ -31,7 +35,7 @@ impl Framebuffer {
     #[cfg(feature = "loader_main")]
     pub fn new(addr: u64, width: u32, height: u32, bpp: u8, pitch: u16) -> Self {
         Self {
-            fb_addr: addr,
+            fb_addr: addr as *mut u8,
             width,
             height,
             bpp,
@@ -40,7 +44,7 @@ impl Framebuffer {
     }
 
     /// Get the framebuffer address.
-    pub fn address(&self) -> u64 {
+    pub fn address(&self) -> *mut u8 {
         self.fb_addr
     }
 
