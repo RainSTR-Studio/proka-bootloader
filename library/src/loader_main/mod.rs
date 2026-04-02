@@ -112,8 +112,8 @@ fn get_framebuffer() -> Framebuffer {
     let fb_addr: u64 = 0xffff800040000000; // Mapped
     let width: u32 = vbe.x_resolution.into();
     let height: u32 = vbe.y_resolution.into();
-    let bpp = vbe.bits_per_pixel / 8;
-    let pitch = vbe.bytes_per_scan_line;
+    let bpp: u64 = (vbe.bits_per_pixel / 8).into();
+    let pitch: u64 = vbe.bytes_per_scan_line.into();
 
     // Init the framebuffer struct
     let fb = Framebuffer::new(fb_addr, width, height, bpp, pitch);

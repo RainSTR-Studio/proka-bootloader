@@ -3,12 +3,5 @@
 version = 4
 
 [[package]]
-name = "pkbl-legacy-stage4"
-version = "0.1.0"
-dependencies = [
- "proka-bootloader",
-]
-
-[[package]]
 name = "proka-bootloader"
-version = "0.1.6"
+version = "0.1.7"

@@ -22,8 +22,8 @@ pub struct Framebuffer {
     fb_addr: *mut u8,
     width: u32,
     height: u32,
-    bpp: u8,
-    pitch: u16,
+    bpp: u64,
+    pitch: u64,
 }
 
 impl Framebuffer {
@@ -33,7 +33,7 @@ impl Framebuffer {
     /// bootloader entry, if you are using kernel, this
     /// method is not needed and not usable.
     #[cfg(feature = "loader_main")]
-    pub fn new(addr: u64, width: u32, height: u32, bpp: u8, pitch: u16) -> Self {
+    pub fn new(addr: u64, width: u32, height: u32, bpp: u64, pitch: u64) -> Self {
         Self {
             fb_addr: addr as *mut u8,
             width,
@@ -59,12 +59,12 @@ impl Framebuffer {
     }
 
     /// Get the framebuffer BPP.
-    pub fn bpp(&self) -> u8 {
+    pub fn bpp(&self) -> u64 {
         self.bpp
     }
 
     /// Get the framebuffer pitch.
-    pub fn pitch(&self) -> u16 {
+    pub fn pitch(&self) -> u64 {
         self.pitch
     }
 }

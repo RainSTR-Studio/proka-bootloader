@@ -45,7 +45,7 @@ dependencies = [
 
 [[package]]
 name = "proka-bootloader"
-version = "0.1.5"
+version = "0.1.7"
 
 [[package]]
 name = "ptr_meta"
