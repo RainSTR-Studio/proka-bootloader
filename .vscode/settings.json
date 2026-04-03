@@ -1,5 +1,8 @@
 {
     "conventionalCommits.scopes": [
-        "legacy"
-    ]
+        "legacy",
+        "uefi"
+    ],
+    "rust-analyzer.check.allTargets": true,
+    "rust-analyzer.cargo.allTargets": true,
 }

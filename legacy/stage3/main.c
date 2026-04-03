@@ -11,6 +11,7 @@
 // Externs
 extern void loadkrnl(void);
 extern void prepare_sg4(void);
+void init_paging(uint32_t fb_phys);
 
 // Page tables placed at fixed physical addresses (4K aligned)
 #define PML4_PADDR 0x60000

@@ -6,9 +6,12 @@ authors = ["zhangxuan2011 <zx20110412@outlook.com>"]
 description = "The bootloader for Proka OS"
 license = "GPL-3.0"
 
+[dependencies]
+uefi = { version = "0.35", optional = true}
+
 [features]
 default = []
-loader_main = []
+loader_main = ["uefi"]
 
 [profile.dev]
 panic = "abort"

@@ -5,5 +5,5 @@ edition = "2024"
 publish = false
 
 [dependencies]
-uefi = { version = "0.35", features = ["alloc", "global_allocator", "panic_handler"] }
-proka-bootloader = { path = "../library" }
+uefi = { version = "0.35", features = ["alloc", "global_allocator"] }
+proka-bootloader = { path = "../library", features = ["loader_main"] }

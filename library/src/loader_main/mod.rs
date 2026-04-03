@@ -14,6 +14,7 @@ use core::arch::asm;
 use crate::memory::{MemoryEntry, MemoryMap, MemoryType};
 use crate::output::Framebuffer;
 use crate::{BootMode, BootInfo};
+use uefi::mem::memory_map::MemoryMapOwned;
 
 /// The GDT structures.
 #[used]
@@ -40,7 +41,7 @@ static mut GDT_PTR: GdtPtr = GdtPtr {
 /// You need to pass one argument, which references to
 /// the boot mode, only Legacy and Uefi are legal
 pub fn loader_main(bootmode: BootMode) -> ! {
-    // Get the essential information
+    // Get the essential information for kernel
     let framebuffer = get_framebuffer();
     let memory_map = get_memory_map();
 
@@ -50,7 +51,6 @@ pub fn loader_main(bootmode: BootMode) -> ! {
     let kernel_start: u32 = 0;
 
     // Jump to kernel
-    #[cfg(target_os = "none")]
     unsafe {
         // Update GDT_PTR
         GDT_PTR.base = GDT.as_ptr() as u64;
@@ -61,10 +61,10 @@ pub fn loader_main(bootmode: BootMode) -> ! {
         );
         asm!(
             "and esp, 0xFFFFFF00",
-            in("ebx") &boot_info
+            in("eax") &boot_info
         );
         asm!(
-            "push ebx",
+            "push eax",
             "push 0xffff8000",
             "push {entry:e}",
             entry = in(reg) kernel_start
@@ -109,7 +109,7 @@ pub fn loader_main(bootmode: BootMode) -> ! {
 fn get_framebuffer() -> Framebuffer {
     // Init the VBE info
     let vbe = VBEInfo::load(0x10000); // Put in fixed address in stage2
-    let fb_addr: u64 = 0xffff800040000000; // Mapped
+    let fb_addr: *mut u8 = 0xffff800040000000u64 as *mut u8; // Mapped
     let width: u64 = vbe.x_resolution.into();
     let height: u64 = vbe.y_resolution.into();
     let bpp: u64 = (vbe.bits_per_pixel / 8).into();
@@ -171,4 +171,28 @@ fn get_memory_map() -> MemoryMap {
 
     memory_map.count = (entry_count as u32) - bad_count;
     memory_map
+}
+
+#[cfg(target_os = "uefi")]
+fn get_memory_map() -> MemoryMap {
+    // Get the uefi memory map first
+    let memory_map_uefi = unsafe { &*(0x10100 as *const MemoryMapOwned) };
+
+    // And convert it to our MemoryMap struct
+    let mut memory_map = MemoryMap {
+        count: 0,
+        entries: [MemoryEntry {
+            base_addr: 0,
+            length: 0,
+            mem_type: MemoryType::Reserved,
+        }; 128],
+    };
+    memory_map.clone()
+}
+
+#[cfg(target_os = "uefi")]
+fn get_framebuffer() -> Framebuffer {
+    // Load framebuffer info from the standard location
+    let fb_info = unsafe { &*(0x10000 as *const Framebuffer) };
+    fb_info.clone()
 }

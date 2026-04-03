@@ -33,9 +33,9 @@ impl Framebuffer {
     /// bootloader entry, if you are using kernel, this
     /// method is not needed and not usable.
     #[cfg(feature = "loader_main")]
-    pub fn new(addr: u64, width: u64, height: u64, bpp: u64, pitch: u64) -> Self {
+    pub fn new(addr: *mut u8, width: u64, height: u64, bpp: u64, pitch: u64) -> Self {
         Self {
-            fb_addr: addr as *mut u8,
+            fb_addr: addr,
             width,
             height,
             bpp,
