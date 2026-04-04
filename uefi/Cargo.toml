@@ -7,3 +7,4 @@ publish = false
 [dependencies]
 uefi = { version = "0.35", features = ["panic_handler"] }
 proka-bootloader = { path = "../library", features = ["loader_main"] }
+x86_64 = { version = "0.15.4", default-features = false, features = ["instructions"] }

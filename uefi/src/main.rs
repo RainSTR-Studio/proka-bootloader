@@ -7,7 +7,6 @@
 
 use proka_bootloader::output::Framebuffer;
 use uefi::{
-    boot::{AllocateType, MemoryType},
     mem::memory_map::MemoryMapOwned,
     prelude::*,
     println,
@@ -16,9 +15,6 @@ use uefi::{
         media::file::{File, FileAttribute, FileInfo, FileMode},
     },
 };
-
-const DATA_START_ADDR: u64 = 0x10000;
-const DATA_PAGE: usize = 144; // 0x10000 ~ 0x90000
 
 #[entry]
 fn main() -> Status {
@@ -39,34 +35,26 @@ fn main() -> Status {
     let address = gop.frame_buffer().as_mut_ptr();
     let width: u64 = gop.current_mode_info().resolution().0 as u64;
     let height: u64 = gop.current_mode_info().resolution().1 as u64;
-    let pitch: u64 = gop.current_mode_info().stride() as u64;
+    let pitch: u64 = (gop.current_mode_info().stride() * 4) as u64;
     let bpp: u64 = match gop.current_mode_info().pixel_format() {
-        PixelFormat::Rgb => 32,
-        PixelFormat::Bgr => 32,
-        PixelFormat::Bitmask => 32,
-        _ => 0, // No framebuffer
+        PixelFormat::Rgb => 4,     // 32 / 8
+        PixelFormat::Bgr => 4,     // 32 / 8
+        PixelFormat::Bitmask => 4, // 32 / 8
+        _ => 0,                    // No framebuffer
     };
 
     // Clear screen
     unsafe {
         for y in 0..height {
             for x in 0..width {
-                let offset = y * pitch + x;
-                address.add(offset as usize).cast::<u32>().write_volatile(0x00000000);
+                let offset = y * pitch + x * bpp;
+                address.add(offset as usize).cast::<u32>().write(0x00000000);
             }
         }
     }
 
-    // Allocate the page for the data address
-    boot::allocate_pages(
-        AllocateType::Address(DATA_START_ADDR),
-        MemoryType::LOADER_DATA,
-        DATA_PAGE,
-    )
-    .unwrap();
-
     // Merge them as a Framebuffer struct and put to a fixed address
-    let fb = Framebuffer::new(address, width, height, bpp, pitch);
+    let fb = Framebuffer::new(address as u64, width, height, bpp, pitch);
     unsafe {
         let ptr = 0x10000 as *mut Framebuffer;
         *ptr = fb;
@@ -85,25 +73,17 @@ fn main() -> Status {
     let info = kernel.get_info::<FileInfo>(infobuf).unwrap();
     let size = info.file_size() as usize;
 
-    // Allocate the page for the kernel
-    boot::allocate_pages(
-        AllocateType::Address(0x200000),
-        MemoryType::LOADER_DATA,
-        size / 4096, // size pages
-    )
-    .unwrap();
-
     // Copy to the target address
     let mut buf = unsafe {
         core::slice::from_raw_parts_mut(0x200000 as *mut u8, size) // 64MB for kernel
     };
     kernel.into_regular_file().unwrap().read(&mut buf).unwrap();
+    println!("Kernel loaded at 0x200000, size: {} bytes", size);
 
     // Fine, then quit the uefi boot services and do some preparations.
-    let memtype = Some(MemoryType::CONVENTIONAL);
     let memory_map = unsafe {
         core::arch::asm!("cli"); // Disable interrupts before exiting boot services
-        boot::exit_boot_services(memtype)
+        boot::exit_boot_services(None)
     };
 
     // Since then, the UEFI boot services will be disabled.

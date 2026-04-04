@@ -19,7 +19,7 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "default", derive(Default))]
 pub struct Framebuffer {
-    fb_addr: *mut u8,
+    fb_addr: u64,
     width: u64,
     height: u64,
     bpp: u64,
@@ -33,7 +33,7 @@ impl Framebuffer {
     /// bootloader entry, if you are using kernel, this
     /// method is not needed and not usable.
     #[cfg(feature = "loader_main")]
-    pub fn new(addr: *mut u8, width: u64, height: u64, bpp: u64, pitch: u64) -> Self {
+    pub fn new(addr: u64, width: u64, height: u64, bpp: u64, pitch: u64) -> Self {
         Self {
             fb_addr: addr,
             width,
@@ -44,7 +44,7 @@ impl Framebuffer {
     }
 
     /// Get the framebuffer address.
-    pub fn address(&self) -> *mut u8 {
+    pub fn address(&self) -> u64 {
         self.fb_addr
     }
 

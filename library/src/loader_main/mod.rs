@@ -132,14 +132,14 @@ pub fn loader_main(bootmode: BootMode) -> ! {
 fn get_framebuffer() -> Framebuffer {
     // Init the VBE info
     let vbe = VBEInfo::load(0x10000); // Put in fixed address in stage2
-    let fb_addr: *mut u8 = 0xffff800040000000u64 as *mut u8; // Mapped
+    let fb_addr: u64 = 0xffff800040000000u64; // Mapped
     let width: u64 = vbe.x_resolution.into();
     let height: u64 = vbe.y_resolution.into();
     let bpp: u64 = (vbe.bits_per_pixel / 8).into();
     let pitch: u64 = vbe.bytes_per_scan_line.into();
 
     // Init the framebuffer struct
-    let fb = Framebuffer::new(fb_addr, width, height, bpp, pitch);
+    let fb = Framebuffer::new(fb_addr, width, height, bpp, pitch * bpp);
     fb
 }
 
