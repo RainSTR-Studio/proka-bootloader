@@ -139,7 +139,7 @@ fn get_framebuffer() -> Framebuffer {
     let pitch: u64 = vbe.bytes_per_scan_line.into();
 
     // Init the framebuffer struct
-    let fb = Framebuffer::new(fb_addr, width, height, bpp, pitch * bpp);
+    let fb = Framebuffer::new(fb_addr, width, height, bpp, pitch);
     fb
 }
 
