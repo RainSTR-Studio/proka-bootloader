@@ -4,17 +4,28 @@
 //! So if you are using this crate by kernel, do not
 //! enable this feature and trying importing this module.
 
-mod memory;
-mod output;
 mod gdt;
-use self::memory::E820Map;
-use self::output::VBEInfo;
+#[cfg(target_os = "none")]
+mod memory;
+#[cfg(target_os = "none")]
+mod output;
+
+
 use self::gdt::GdtPtr;
-use core::arch::asm;
 use crate::memory::{MemoryEntry, MemoryMap, MemoryType};
 use crate::output::Framebuffer;
-use crate::{BootMode, BootInfo};
-use uefi::mem::memory_map::MemoryMapOwned;
+use crate::{BootInfo, BootMode};
+use core::arch::asm;
+
+// OS specific imports
+#[cfg(target_os = "none")]
+use {self::memory::E820Map, self::output::VBEInfo};
+
+#[cfg(target_os = "uefi")]
+use {
+    uefi::boot::MemoryType as UefiMemoryType,
+    uefi::mem::memory_map::{MemoryMap as UefiMemoryMap, MemoryMapOwned},
+};
 
 /// The GDT structures.
 #[used]
@@ -22,16 +33,16 @@ static GDT: [u64; 3] = [
     // Empty entry
     0,
     // The code segment
-    (1<<43) | (1<<44) | (1<<47) | (1<<53) | (0<<22),
+    (1 << 43) | (1 << 44) | (1 << 47) | (1 << 53) | (0 << 22),
     // The data segment
-    (1<<44) | (1<<47) | (1<<41) | (1<<53) | (1<<55)
+    (1 << 44) | (1 << 47) | (1 << 41) | (1 << 53) | (1 << 55),
 ];
 
 /// The GDT pointer.
 #[used]
 static mut GDT_PTR: GdtPtr = GdtPtr {
     limit: 25,
-    base: 0     // Will change in runtime
+    base: 0, // Will change in runtime
 };
 
 /// This function is the generic main entry of the whole
@@ -50,7 +61,8 @@ pub fn loader_main(bootmode: BootMode) -> ! {
 
     let kernel_start: u32 = 0;
 
-    // Jump to kernel
+    // Jump to kernel (BIOS boot only)
+    #[cfg(target_os = "none")]
     unsafe {
         // Update GDT_PTR
         GDT_PTR.base = GDT.as_ptr() as u64;
@@ -61,18 +73,15 @@ pub fn loader_main(bootmode: BootMode) -> ! {
         );
         asm!(
             "and esp, 0xFFFFFF00",
-            in("eax") &boot_info
+            in("ecx") &boot_info
         );
         asm!(
-            "push eax",
+            "push ecx",
             "push 0xffff8000",
             "push {entry:e}",
             entry = in(reg) kernel_start
         );
-        asm!(
-            "ljmp $0x8, $2f", "2:",
-            options(att_syntax)
-        );
+        asm!("ljmp $0x8, $2f", "2:", options(att_syntax));
         asm!(
             ".code64",
 
@@ -100,6 +109,20 @@ pub fn loader_main(bootmode: BootMode) -> ! {
             out("rax") _,
             out("rdi") _,
         );
+    }
+
+    #[cfg(target_os = "uefi")]
+    unsafe {
+        // Because the UEFI is 64-bit, so we can directly jump to kernel without setting up GDT and segment registers.
+        // Just jump to the kernel entry point, and pass the boot info as argument in rax
+        asm!(
+            "mov rax, 0xffff800000000000",
+            "add eax, {0:e}",
+            "mov rdi, {1}",
+            in(reg) kernel_start,
+            in(reg) &boot_info
+        );
+        asm!("jmp rax");
     }
 
     loop {}
@@ -178,7 +201,7 @@ fn get_memory_map() -> MemoryMap {
     // Get the uefi memory map first
     let memory_map_uefi = unsafe { &*(0x10100 as *const MemoryMapOwned) };
 
-    // And convert it to our MemoryMap struct
+    // Init basic struct
     let mut memory_map = MemoryMap {
         count: 0,
         entries: [MemoryEntry {
@@ -187,6 +210,31 @@ fn get_memory_map() -> MemoryMap {
             mem_type: MemoryType::Reserved,
         }; 128],
     };
+
+    // And convert it to our MemoryMap struct
+    let entries = memory_map_uefi.entries();
+    for entry in entries {
+        let mem_type = match entry.ty {
+            UefiMemoryType::CONVENTIONAL |
+            UefiMemoryType::LOADER_CODE  | 
+            UefiMemoryType::LOADER_DATA => MemoryType::FreeRAM,
+            UefiMemoryType::RESERVED => MemoryType::Reserved,
+            UefiMemoryType::MMIO => MemoryType::Mmio,
+            _ => MemoryType::BadMemory, // Treat other types as bad memory
+        };
+
+        if memory_map.count < 128 {
+            memory_map.entries[memory_map.count as usize] = MemoryEntry {
+                base_addr: entry.phys_start,
+                length: entry.page_count * 4096,
+                mem_type,
+            };
+            if !matches!(mem_type, MemoryType::BadMemory) {
+                memory_map.count += 1;
+            }
+        }
+    }
+
     memory_map.clone()
 }
 

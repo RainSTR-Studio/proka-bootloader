@@ -3,6 +3,19 @@
         "legacy",
         "uefi"
     ],
-    "rust-analyzer.check.allTargets": true,
-    "rust-analyzer.cargo.allTargets": true,
+    "rust-analyzer.check.allTargets": false,
+    "rust-analyzer.check.targets": [
+        "x86_64-unknown-uefi",
+        "x86_64-unknown-none"
+    ],
+    "rust-analyzer.cargo.cfgs": [
+        "debug_assertions",
+        "target_os = \"uefi\"",
+        "target_os = \"none\""
+    ],
+    "rust-analyzer.diagnostics.disabled": [
+        "unresolved-extern-crate",
+        "missing-crates",
+        "macro-expanded-failed"
+    ],
 }

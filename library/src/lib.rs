@@ -7,6 +7,9 @@
 
 #![no_std]
 #![no_main]
+#![feature(custom_test_frameworks)]
+#![test_runner(self::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
 #[cfg(feature = "loader_main")]
 pub mod loader_main;
@@ -72,4 +75,11 @@ pub enum BootMode {
     ///
     /// Also, some machine only support it (such as mine awa).
     Uefi,
+}
+
+#[cfg(test)]
+fn test_runner(tests: &[&dyn Fn()]) {
+    for test in tests {
+        test();
+    }
 }
