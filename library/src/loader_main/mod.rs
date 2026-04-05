@@ -59,11 +59,6 @@ pub fn loader_main(bootmode: BootMode) -> ! {
     // Intergrate them into a BootInfo struct
     let boot_info = BootInfo::new(bootmode, memory_map, framebuffer);
 
-    unsafe {
-        let ptr = 0x100000 as *mut BootInfo;
-        *ptr = boot_info;
-    }
-
     let kernel_start: u32 = 0;
 
     // Jump to kernel (BIOS boot only)

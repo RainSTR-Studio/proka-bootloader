@@ -12,10 +12,12 @@ const PDPT_HIGH_ADDR: u64 = 0x23000;
 const PDT_HIGH_ADDR: u64 = 0x24000;
 const PDT_FB_ADDR: u64 = 0x27000;
 
-use proka_bootloader::{BootMode, output::Framebuffer};
 use proka_bootloader::loader_main::loader_main;
+use proka_bootloader::{BootMode, output::Framebuffer};
 use x86_64::{
-    PhysAddr, registers::control::{Cr3, Cr3Flags}, structures::paging::{PageTable, PageTableFlags, PhysFrame}
+    PhysAddr,
+    registers::control::{Cr3, Cr3Flags},
+    structures::paging::{PageTable, PageTableFlags, PhysFrame},
 };
 
 /// The stage1 entry
@@ -50,13 +52,17 @@ pub fn stage1_entry() -> ! {
         pdt_high[i as usize].set_addr(PhysAddr::new(offset + 0x200000), pdt_flags);
     }
 
-    // Map 16MB
+    // Map 16MB framebuffer
     let addr = framebuffer.address();
-    let ptr = 0x100000 as *mut u64;
-    unsafe { *ptr = addr; }
+    let fb_flags = PageTableFlags::PRESENT
+        | PageTableFlags::WRITABLE
+        | PageTableFlags::HUGE_PAGE
+        | PageTableFlags::NO_EXECUTE
+        | PageTableFlags::NO_CACHE
+        | PageTableFlags::WRITE_THROUGH;
     for i in 0..8 {
         let offset = i * 0x200000;
-        pdt_fb[i as usize].set_addr(PhysAddr::new(addr + offset), pdt_flags);
+        pdt_fb[i as usize].set_addr(PhysAddr::new(addr + offset), fb_flags);
     }
 
     // Then map the PDPT page

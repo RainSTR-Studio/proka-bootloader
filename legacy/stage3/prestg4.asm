@@ -8,7 +8,6 @@
 ; kernel address finally.
 [bits 32]
 
-
 section .text
 global prepare_sg4
 prepare_sg4:
@@ -18,9 +17,9 @@ prepare_sg4:
   mov eax, 0x60000  ; Hard-coded in C
   mov cr3, eax
 
-  ; Enable CR4.PAE 
+  ; Enable CR4.PAE, PGE, OSFXSR, OSXMMEXCPT
   mov eax, cr4 
-  or eax, (1 << 5)
+  or  eax, (1 << 3) | (1 << 5) | (1 << 6) | (1 << 9) |(1 << 10)
   mov cr4, eax
 
   ; Enable EMER.LME
@@ -29,9 +28,9 @@ prepare_sg4:
   or  eax, 1 << 8
   wrmsr
 
-  ; Enable paging & Write protect
+  ; Enable CR0.PG, WP, TS and EM
   mov eax, cr0
-  or eax, 1 << 31 | 1 << 16
+  or  eax, (1 << 1) | (1 << 4) | (1 << 5) | (1 << 31) | (1 << 16)
   mov cr0, eax
 
   ; Jump to long mode!

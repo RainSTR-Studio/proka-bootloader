@@ -14,10 +14,7 @@ STAGE3_ASM_SRC := loadkrnl.asm prestg4.asm
 STAGE3_C_BIN := $(BUILD_DIR)/stage3.o
 STAGE3_ASM_BIN  := $(patsubst %.asm,$(BUILD_DIR)/%.o,$(STAGE3_ASM_SRC))
 
-all: prepare $(STAGE3_C_BIN) $(STAGE3_ASM_BIN)
-
-prepare:
-	mkdir -p $(OUTPUT_DIR)
+all: $(STAGE3_C_BIN) $(STAGE3_ASM_BIN)
 
 $(STAGE3_C_BIN): $(STAGE3_C_SRC)
 	$(CC) $(CFLAGS) $< -o $@

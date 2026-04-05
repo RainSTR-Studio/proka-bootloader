@@ -10,10 +10,7 @@ OUTPUT_DIR ?= output
 STAGE2_SRC := main.asm
 STAGE2_BIN := $(BUILD_DIR)/stage2.o
 
-all: prepare $(STAGE2_BIN)
-
-prepare:
-	mkdir -p $(OUTPUT_DIR)
+all: $(STAGE2_BIN)
 
 $(STAGE2_BIN): $(STAGE2_SRC)
 	$(NASM) -f elf32 $< -o $@

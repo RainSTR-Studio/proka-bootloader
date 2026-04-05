@@ -5,7 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-proka-bootloader = { version = "0.1.0", path = "../../library", features = ["loader_main"] }
+proka-bootloader = { path = "../../library", features = ["loader_main"] }
 
 [lib]
 name = "stage4"

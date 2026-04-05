@@ -95,9 +95,8 @@ void init_paging(uint32_t fb_phys) {
         pdt_high->entries[i].pfn = ((i + 1) * 0x200000) >> 12;
     }
 
-    // Map framebuffer address (4MB)
+    // Map framebuffer address (16MB)
     for (uint64_t i = 0; i < 8; i++) {
-	pdt_fb->entries[i].value = 0;
         pdt_fb->entries[i].present = 1;
         pdt_fb->entries[i].writable = 1;
         pdt_fb->entries[i].huge = 1;
