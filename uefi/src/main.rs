@@ -32,7 +32,7 @@ fn main() -> Status {
     let mut gop = boot::open_protocol_exclusive::<GraphicsOutput>(gop_handle).unwrap();
 
     // Get the essential information
-    let address = gop.frame_buffer().as_mut_ptr();
+    let address = gop.frame_buffer().as_mut_ptr() as u64;
     let width: u64 = gop.current_mode_info().resolution().0 as u64;
     let height: u64 = gop.current_mode_info().resolution().1 as u64;
     let pitch: u64 = (gop.current_mode_info().stride() * 4) as u64;
@@ -45,10 +45,11 @@ fn main() -> Status {
 
     // Clear screen
     unsafe {
+        let addr = address as *mut u8;
         for y in 0..height {
             for x in 0..width {
                 let offset = y * pitch + x * bpp;
-                address.add(offset as usize).cast::<u32>().write(0x00000000);
+                addr.add(offset as usize).cast::<u32>().write(0x00000000);
             }
         }
     }
@@ -78,7 +79,6 @@ fn main() -> Status {
         core::slice::from_raw_parts_mut(0x200000 as *mut u8, size) // 64MB for kernel
     };
     kernel.into_regular_file().unwrap().read(&mut buf).unwrap();
-    println!("Kernel loaded at 0x200000, size: {} bytes", size);
 
     // Fine, then quit the uefi boot services and do some preparations.
     let memory_map = unsafe {

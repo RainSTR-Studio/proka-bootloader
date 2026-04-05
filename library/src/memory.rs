@@ -37,5 +37,4 @@ pub enum MemoryType {
     AcpiReclaim = 3,
     AcpiNvs = 4,
     BadMemory = 5,
-    Mmio = 6,
 }

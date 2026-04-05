@@ -25,8 +25,8 @@ use self::memory::MemoryMap;
 pub struct BootInfo {
     /// The boot mode, see the [`BootMode`] enum.
     boot_mode: BootMode,
-    memmap: MemoryMap,
     framebuffer: Framebuffer,
+    memmap: MemoryMap,
 }
 
 impl BootInfo {

@@ -59,6 +59,11 @@ pub fn loader_main(bootmode: BootMode) -> ! {
     // Intergrate them into a BootInfo struct
     let boot_info = BootInfo::new(bootmode, memory_map, framebuffer);
 
+    unsafe {
+        let ptr = 0x100000 as *mut BootInfo;
+        *ptr = boot_info;
+    }
+
     let kernel_start: u32 = 0;
 
     // Jump to kernel (BIOS boot only)
@@ -117,10 +122,10 @@ pub fn loader_main(bootmode: BootMode) -> ! {
         // Just jump to the kernel entry point, and pass the boot info as argument in rax
         asm!(
             "mov rax, 0xffff800000000000",
-            "add eax, {0:e}",
-            "mov rdi, {1}",
-            in(reg) kernel_start,
-            in(reg) &boot_info
+            "add rax, rsi",
+            in("rdi") &boot_info,
+            in("rsi") kernel_start,
+            options(nomem, nostack)
         );
         asm!("jmp rax");
     }
@@ -214,12 +219,17 @@ fn get_memory_map() -> MemoryMap {
     // And convert it to our MemoryMap struct
     let entries = memory_map_uefi.entries();
     for entry in entries {
+        // Convert uefi memory type to our memory type (will more implement later)
         let mem_type = match entry.ty {
             UefiMemoryType::CONVENTIONAL |
             UefiMemoryType::LOADER_CODE  | 
             UefiMemoryType::LOADER_DATA => MemoryType::FreeRAM,
             UefiMemoryType::RESERVED => MemoryType::Reserved,
-            UefiMemoryType::MMIO => MemoryType::Mmio,
+            UefiMemoryType::MMIO => MemoryType::Reserved,
+            UefiMemoryType::ACPI_RECLAIM => MemoryType::AcpiReclaim,
+            UefiMemoryType::ACPI_NON_VOLATILE => MemoryType::AcpiNvs,
+            UefiMemoryType::BOOT_SERVICES_CODE | 
+            UefiMemoryType::BOOT_SERVICES_DATA => MemoryType::FreeRAM,  // UEFI crate said it's free RAM in OS
             _ => MemoryType::BadMemory, // Treat other types as bad memory
         };
 
@@ -242,5 +252,14 @@ fn get_memory_map() -> MemoryMap {
 fn get_framebuffer() -> Framebuffer {
     // Load framebuffer info from the standard location
     let fb_info = unsafe { &*(0x10000 as *const Framebuffer) };
-    fb_info.clone()
+
+    // Rebuild the framebuffer struct
+    let addr = 0xffff800040000000u64; // Mapped
+    let width = fb_info.width();
+    let height = fb_info.height();
+    let bpp = fb_info.bpp();
+    let pitch = fb_info.pitch();
+    
+    let fb = Framebuffer::new(addr, width, height, bpp, pitch);
+    fb
 }

@@ -12,7 +12,8 @@ const PDPT_HIGH_ADDR: u64 = 0x23000;
 const PDT_HIGH_ADDR: u64 = 0x24000;
 const PDT_FB_ADDR: u64 = 0x27000;
 
-use proka_bootloader::output::Framebuffer;
+use proka_bootloader::{BootMode, output::Framebuffer};
+use proka_bootloader::loader_main::loader_main;
 use x86_64::{
     PhysAddr, registers::control::{Cr3, Cr3Flags}, structures::paging::{PageTable, PageTableFlags, PhysFrame}
 };
@@ -50,9 +51,11 @@ pub fn stage1_entry() -> ! {
     }
 
     // Map 16MB
+    let addr = framebuffer.address();
+    let ptr = 0x100000 as *mut u64;
+    unsafe { *ptr = addr; }
     for i in 0..8 {
-        let addr = framebuffer.address() as u64;
-        let offset = addr + i * 0x200000;
+        let offset = i * 0x200000;
         pdt_fb[i as usize].set_addr(PhysAddr::new(addr + offset), pdt_flags);
     }
 
@@ -74,7 +77,8 @@ pub fn stage1_entry() -> ! {
         Cr3::write(pml4_frame, Cr3Flags::empty());
     }
 
-    loop {}
+    // Go to stage2 to officially start the kernel
+    loader_main(BootMode::Uefi)
 }
 
 #[cfg(test)]
