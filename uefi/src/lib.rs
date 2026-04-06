@@ -26,7 +26,7 @@ pub fn stage1_entry() -> ! {
     unsafe {
         let (cr3, _) = Cr3::read();
         let src = cr3.start_address().as_u64();
-        let dst = PML4_ADDR;   // 0x200000 + 124MB
+        let dst = PML4_ADDR; // 0x200000 + 124MB
         core::ptr::copy(src as *const u8, dst as *mut u8, 0x400000);
     }
 
@@ -53,15 +53,9 @@ pub fn stage1_entry() -> ! {
 
     // Map 16MB framebuffer
     let addr = framebuffer.address();
-    let fb_flags = PageTableFlags::PRESENT
-        | PageTableFlags::WRITABLE
-        | PageTableFlags::HUGE_PAGE
-        | PageTableFlags::NO_EXECUTE
-        | PageTableFlags::NO_CACHE
-        | PageTableFlags::WRITE_THROUGH;
     for i in 0..8 {
         let offset = i * 0x200000;
-        pdt_fb[i as usize].set_addr(PhysAddr::new(addr + offset), fb_flags);
+        pdt_fb[i as usize].set_addr(PhysAddr::new(addr + offset), pdt_flags);
     }
 
     // Then map the PDPT page
