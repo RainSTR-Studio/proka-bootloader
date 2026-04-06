@@ -5,12 +5,10 @@
 #![test_runner(self::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-const PML4_ADDR: u64 = 0x20000;
-const PDPT_LOW_ADDR: u64 = 0x21000;
-const PDT_LOW_ADDR: u64 = 0x22000;
-const PDPT_HIGH_ADDR: u64 = 0x23000;
-const PDT_HIGH_ADDR: u64 = 0x24000;
-const PDT_FB_ADDR: u64 = 0x27000;
+const PML4_ADDR: u64 = 0x7e00000;
+const PDPT_HIGH_ADDR: u64 = 0x20000;
+const PDT_HIGH_ADDR: u64 = 0x21000;
+const PDT_FB_ADDR: u64 = 0x22000;
 
 use proka_bootloader::loader_main::loader_main;
 use proka_bootloader::{BootMode, output::Framebuffer};
@@ -24,14 +22,20 @@ use x86_64::{
 pub fn stage1_entry() -> ! {
     // Once you entered this function, you are in stage1.
     // This will do mapping of memory.
+    // First, copy the UEFI page table to 0x100000.
+    unsafe {
+        let (cr3, _) = Cr3::read();
+        let src = cr3.start_address().as_u64();
+        let dst = PML4_ADDR;   // 0x200000 + 124MB
+        core::ptr::copy(src as *const u8, dst as *mut u8, 0x400000);
+    }
+
     // So, create a new page table, and map the physical memory to
     // the virtual memory with identity mapping. (0x0 ~ 0x1FFFFF)
     let framebuffer: Framebuffer = *unsafe { &*(0x10000 as *const Framebuffer) };
 
     // So, first, initialize the page tables.
     let pml4 = unsafe { &mut *(PML4_ADDR as *mut PageTable) };
-    let pdpt_low = unsafe { &mut *(PDPT_LOW_ADDR as *mut PageTable) };
-    let pdt_low = unsafe { &mut *(PDT_LOW_ADDR as *mut PageTable) };
     let pdpt_high = unsafe { &mut *(PDPT_HIGH_ADDR as *mut PageTable) };
     let pdt_high = unsafe { &mut *(PDT_HIGH_ADDR as *mut PageTable) };
     let pdt_fb = unsafe { &mut *(PDT_FB_ADDR as *mut PageTable) };
@@ -40,11 +44,6 @@ pub fn stage1_entry() -> ! {
     // Identity mapping for 0x0 ~ 0x1FFFFF
     // First, map the PDT page
     let pdt_flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE;
-
-    // Map 1GB to support UEFI runtime services, and also for the future use
-    for i in 0..512 {
-        pdt_low[i as usize].set_addr(PhysAddr::new(i * 0x200000), pdt_flags);
-    }
 
     // Map 128MB
     for i in 0..64 {
@@ -67,13 +66,11 @@ pub fn stage1_entry() -> ! {
 
     // Then map the PDPT page
     let pdpt_flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
-    pdpt_low[0].set_addr(PhysAddr::new(PDT_LOW_ADDR), pdpt_flags);
     pdpt_high[0].set_addr(PhysAddr::new(PDT_HIGH_ADDR), pdpt_flags);
     pdpt_high[1].set_addr(PhysAddr::new(PDT_FB_ADDR), pdpt_flags);
 
     // Finally, map the PML4 page
     let pml4_flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
-    pml4[0].set_addr(PhysAddr::new(PDPT_LOW_ADDR), pml4_flags);
     pml4[256].set_addr(PhysAddr::new(PDPT_HIGH_ADDR), pml4_flags);
 
     // Load the new page table
