@@ -5,7 +5,7 @@
 #![test_runner(self::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-const PML4_ADDR: u64 = 0x7e00000;
+const PML4_ADDR: u64 = 0x6200000;   // 2MB+96MB
 const PDPT_HIGH_ADDR: u64 = 0x20000;
 const PDT_HIGH_ADDR: u64 = 0x21000;
 const PDT_FB_ADDR: u64 = 0x22000;
@@ -27,7 +27,7 @@ pub fn stage1_entry() -> ! {
         let (cr3, _) = Cr3::read();
         let src = cr3.start_address().as_u64();
         let dst = PML4_ADDR; // 0x200000 + 124MB
-        core::ptr::copy(src as *const u8, dst as *mut u8, 0x400000);
+        core::ptr::copy(src as *const u8, dst as *mut u8, 0x2000000);
     }
 
     // So, create a new page table, and map the physical memory to

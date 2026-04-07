@@ -27,7 +27,28 @@ fn main() -> Status {
     // Get current image handle
     let handle = boot::image_handle();
 
-    // And get some protocol
+    // Read the kernel from FAT32 partition, and put it to 0x200000
+    let kernel_path = cstr16!("\\proka-kernel");
+    let mut fs = boot::get_image_file_system(handle).unwrap();
+    let mut root = fs.open_volume().unwrap();
+    let mut kernel = root
+        .open(kernel_path, FileMode::Read, FileAttribute::empty())
+        .unwrap();
+
+    // And get the kernel size
+    let infobuf: &mut [u8; 1024] = &mut [0; 1024]; // 1024 bytes for file info
+    let info = kernel.get_info::<FileInfo>(infobuf).unwrap();
+    let size = info.file_size() as usize;
+
+    // Copy to the target address
+    let mut buf = unsafe {
+        core::slice::from_raw_parts_mut(0x200000 as *mut u8, size) // 64MB for kernel
+    };
+    kernel.into_regular_file().unwrap().read(&mut buf).unwrap();
+    println!("Successfully loaded kernel into 0x200000 (phys) / 0xffff800000000000 (virt).");
+
+    // And get GOP protocol
+    println!("Getting GOP...");
     let gop_handle = boot::get_handle_for_protocol::<GraphicsOutput>().unwrap();
     let mut gop = boot::open_protocol_exclusive::<GraphicsOutput>(gop_handle).unwrap();
 
@@ -60,25 +81,6 @@ fn main() -> Status {
         let ptr = 0x10000 as *mut Framebuffer;
         *ptr = fb;
     }
-
-    // Read the kernel from FAT32 partition, and put it to 0x200000
-    let kernel_path = cstr16!("\\proka-kernel");
-    let mut fs = boot::get_image_file_system(handle).unwrap();
-    let mut root = fs.open_volume().unwrap();
-    let mut kernel = root
-        .open(kernel_path, FileMode::Read, FileAttribute::empty())
-        .unwrap();
-
-    // And get the kernel size
-    let infobuf: &mut [u8; 1024] = &mut [0; 1024]; // 1024 bytes for file info
-    let info = kernel.get_info::<FileInfo>(infobuf).unwrap();
-    let size = info.file_size() as usize;
-
-    // Copy to the target address
-    let mut buf = unsafe {
-        core::slice::from_raw_parts_mut(0x200000 as *mut u8, size) // 64MB for kernel
-    };
-    kernel.into_regular_file().unwrap().read(&mut buf).unwrap();
 
     // Fine, then quit the uefi boot services and do some preparations.
     let memory_map = unsafe {
