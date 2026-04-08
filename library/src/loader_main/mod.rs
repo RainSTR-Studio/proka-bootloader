@@ -59,6 +59,14 @@ pub fn loader_main(bootmode: BootMode) -> ! {
     // Intergrate them into a BootInfo struct
     let boot_info = BootInfo::new(bootmode, memory_map, framebuffer);
 
+    // Copy to 0x100000
+    unsafe {
+        let src = &boot_info as *const BootInfo;
+        let dst = 0x100000 as *mut BootInfo;
+        core::ptr::copy(src, dst, 1);
+    }
+
+    // The kernel start addr
     let kernel_start: u32 = 0;
 
     // Jump to kernel (BIOS boot only)
@@ -73,7 +81,7 @@ pub fn loader_main(bootmode: BootMode) -> ! {
         );
         asm!(
             "and esp, 0xFFFFFF00",
-            in("ecx") &boot_info
+            in("ecx") 0x100000
         );
         asm!(
             "push ecx",
@@ -118,7 +126,7 @@ pub fn loader_main(bootmode: BootMode) -> ! {
         asm!(
             "mov rax, 0xffff800000000000",
             "add rax, rsi",
-            in("rdi") &boot_info,
+            in("rdi") 0x100000,
             in("rsi") kernel_start,
             options(nomem, nostack)
         );

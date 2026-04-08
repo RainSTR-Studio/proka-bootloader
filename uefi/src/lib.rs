@@ -5,10 +5,10 @@
 #![test_runner(self::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-const PML4_ADDR: u64 = 0x6200000;   // 2MB+96MB
-const PDPT_HIGH_ADDR: u64 = 0x20000;
-const PDT_HIGH_ADDR: u64 = 0x21000;
-const PDT_FB_ADDR: u64 = 0x22000;
+const PML4_ADDR: u64 = 0x20000;
+const PDPT_HIGH_ADDR: u64 = 0x21000;
+const PDT_HIGH_ADDR: u64 = 0x22000;
+const PDT_FB_ADDR: u64 = 0x23000;
 
 use proka_bootloader::loader_main::loader_main;
 use proka_bootloader::{BootMode, output::Framebuffer};
@@ -22,12 +22,12 @@ use x86_64::{
 pub fn stage1_entry() -> ! {
     // Once you entered this function, you are in stage1.
     // This will do mapping of memory.
-    // First, copy the UEFI page table to 0x100000.
+    // First, copy the UEFI PML4 table to 0x100000.
     unsafe {
         let (cr3, _) = Cr3::read();
         let src = cr3.start_address().as_u64();
-        let dst = PML4_ADDR; // 0x200000 + 124MB
-        core::ptr::copy(src as *const u8, dst as *mut u8, 0x2000000);
+        let dst = PML4_ADDR;
+        core::ptr::copy(src as *const u8, dst as *mut u8, 4096);
     }
 
     // So, create a new page table, and map the physical memory to
