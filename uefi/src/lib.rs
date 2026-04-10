@@ -53,9 +53,14 @@ pub fn stage1_entry() -> ! {
 
     // Map 16MB framebuffer
     let addr = framebuffer.address();
+    let fb_flags = PageTableFlags::PRESENT 
+        | PageTableFlags::WRITABLE
+        | PageTableFlags::HUGE_PAGE
+        | PageTableFlags::NO_CACHE
+        | PageTableFlags::WRITE_THROUGH;
     for i in 0..8 {
         let offset = i * 0x200000;
-        pdt_fb[i as usize].set_addr(PhysAddr::new(addr + offset), pdt_flags);
+        pdt_fb[i as usize].set_addr(PhysAddr::new(addr + offset), fb_flags);
     }
 
     // Then map the PDPT page
