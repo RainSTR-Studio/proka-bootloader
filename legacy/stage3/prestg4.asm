@@ -28,6 +28,13 @@ prepare_sg4:
   or  eax, 1 << 8
   wrmsr
 
+  ; Set up PAT
+  mov ecx, 0x277
+  rdmsr
+  mov eax, 0x06 | (0x04 << 8) | (0x07 << 16) | (0x00 << 24)
+  mov edx, 0x06 | (0x01 << 8) | (0x05 << 16) | (0 << 24)
+  wrmsr
+
   ; Enable CR0.PG, WP, TS and EM
   mov eax, cr0
   or  eax, (1 << 1) | (1 << 4) | (1 << 5) | (1 << 31) | (1 << 16)

@@ -207,7 +207,7 @@ fn get_memory_map() -> MemoryMap {
 #[cfg(target_os = "uefi")]
 fn get_memory_map() -> MemoryMap {
     // Get the uefi memory map first
-    let memory_map_uefi = unsafe { &*(0x10100 as *const MemoryMapOwned) };
+    let memory_map_uefi = unsafe { &*(0x110100 as *const MemoryMapOwned) };
 
     // Init basic struct
     let mut memory_map = MemoryMap {
@@ -254,7 +254,7 @@ fn get_memory_map() -> MemoryMap {
 #[cfg(target_os = "uefi")]
 fn get_framebuffer() -> Framebuffer {
     // Load framebuffer info from the standard location
-    let fb_info = unsafe { &*(0x10000 as *const Framebuffer) };
+    let fb_info = unsafe { &*(0x110000 as *const Framebuffer) };
 
     // Rebuild the framebuffer struct
     let addr = 0xffff800040000000u64; // Mapped
@@ -263,6 +263,5 @@ fn get_framebuffer() -> Framebuffer {
     let bpp = fb_info.bpp();
     let pitch = fb_info.pitch();
     
-    let fb = Framebuffer::new(addr, width, height, bpp, pitch);
-    fb
+    Framebuffer::new(addr, width, height, bpp, pitch)
 }

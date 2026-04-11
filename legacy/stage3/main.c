@@ -100,7 +100,6 @@ void init_paging(uint32_t fb_phys) {
         pdt_fb->entries[i].present = 1;
         pdt_fb->entries[i].writable = 1;
         pdt_fb->entries[i].huge = 1;
-        pdt_fb->entries[i].cache_disable = 1;
 	pdt_fb->entries[i].write_through = 1;
         pdt_fb->entries[i].pfn = (fb_phys + i * 0x200000) >> 12;
     }

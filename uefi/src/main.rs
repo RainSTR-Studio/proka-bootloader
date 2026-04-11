@@ -10,19 +10,44 @@ use uefi::{
     mem::memory_map::MemoryMapOwned,
     prelude::*,
     println,
+    boot::{AllocateType, MemoryType},
     proto::{
         console::gop::{GraphicsOutput, PixelFormat},
         media::file::{File, FileAttribute, FileInfo, FileMode},
     },
 };
 
+// PAT constants
+const IA32_PAT: u32 = 0x277; 
+const PAT_UC: u64 = 0x00;
+const PAT_WC: u64 = 0x01;
+const PAT_WT: u64 = 0x04;
+const PAT_WP: u64 = 0x05;
+const PAT_WB: u64 = 0x06;
+const PAT_UC_MINUS: u64 = 0x07;
+
 #[entry]
 fn main() -> Status {
     uefi::helpers::init().unwrap();
 
-    // TODO: Add main code here..
+    // This is the main code now..
     println!("Welcome to Proka Bootloader!");
     println!("Currently you are in stage0, and booting Proka OS now :/");
+
+    // Set up PAT
+    println!("[INFO] Setting up PAT...");
+    unsafe {
+        let pat_value: u64 = (PAT_WB) // PAT0: Write Back
+            | (PAT_WT << 8)     // PAT1: Write through
+            | (PAT_UC_MINUS << 16) // PAT2: UC- 
+            | (PAT_UC << 24)    // PAT3: Uncachable
+            | (PAT_WB << 32)    // PAT4: Write Back
+            | (PAT_WC << 40)    // PAT5: Write Combined
+            | (PAT_WP << 48)    // PAT6: Write Protect
+            | (0 << 56);        // Reserved
+        x86_64::registers::model_specific::Msr::new(IA32_PAT).write(pat_value);
+    }
+    println!("[INFO] Successfully set up PAT, now reading kernel...");
 
     // Get current image handle
     let handle = boot::image_handle();
@@ -45,10 +70,13 @@ fn main() -> Status {
         core::slice::from_raw_parts_mut(0x200000 as *mut u8, size) // 64MB for kernel
     };
     kernel.into_regular_file().unwrap().read(&mut buf).unwrap();
-    println!("Successfully loaded kernel into 0x200000 (phys) / 0xffff800000000000 (virt).");
+    println!("[INFO] Successfully loaded kernel into 0x200000 (phys) / 0xffff800000000000 (virt).");
+
+    // Now allocate 0x100000~0x1fffff
+    boot::allocate_pages(AllocateType::Address(0x100000), MemoryType::LOADER_DATA, 256).unwrap();
 
     // And get GOP protocol
-    println!("Getting GOP...");
+    println!("[INFO] Getting GOP...");
     let gop_handle = boot::get_handle_for_protocol::<GraphicsOutput>().unwrap();
     let mut gop = boot::open_protocol_exclusive::<GraphicsOutput>(gop_handle).unwrap();
 
@@ -78,7 +106,7 @@ fn main() -> Status {
     // Merge them as a Framebuffer struct and put to a fixed address
     let fb = Framebuffer::new(address as u64, width, height, bpp, pitch);
     unsafe {
-        let ptr = 0x10000 as *mut Framebuffer;
+        let ptr = 0x110000 as *mut Framebuffer;
         *ptr = fb;
     }
 
@@ -89,9 +117,9 @@ fn main() -> Status {
     };
 
     // Since then, the UEFI boot services will be disabled.
-    // Copy the memory map to 0x10100
+    // Copy the memory map to 0x110100
     unsafe {
-        let ptr = 0x10100 as *mut MemoryMapOwned;
+        let ptr = 0x110100 as *mut MemoryMapOwned;
         *ptr = memory_map;
     }
 

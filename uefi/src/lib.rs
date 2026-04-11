@@ -5,10 +5,10 @@
 #![test_runner(self::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-const PML4_ADDR: u64 = 0x20000;
-const PDPT_HIGH_ADDR: u64 = 0x21000;
-const PDT_HIGH_ADDR: u64 = 0x22000;
-const PDT_FB_ADDR: u64 = 0x23000;
+const PML4_ADDR: u64 = 0x120000;
+const PDPT_HIGH_ADDR: u64 = 0x121000;
+const PDT_HIGH_ADDR: u64 = 0x122000;
+const PDT_FB_ADDR: u64 = 0x123000;
 
 use proka_bootloader::loader_main::loader_main;
 use proka_bootloader::{BootMode, output::Framebuffer};
@@ -32,7 +32,7 @@ pub fn stage1_entry() -> ! {
 
     // So, create a new page table, and map the physical memory to
     // the virtual memory with identity mapping. (0x0 ~ 0x1FFFFF)
-    let framebuffer: Framebuffer = *unsafe { &*(0x10000 as *const Framebuffer) };
+    let framebuffer: Framebuffer = *unsafe { &*(0x110000 as *const Framebuffer) };
 
     // So, first, initialize the page tables.
     let pml4 = unsafe { &mut *(PML4_ADDR as *mut PageTable) };
@@ -56,7 +56,6 @@ pub fn stage1_entry() -> ! {
     let fb_flags = PageTableFlags::PRESENT 
         | PageTableFlags::WRITABLE
         | PageTableFlags::HUGE_PAGE
-        | PageTableFlags::NO_CACHE
         | PageTableFlags::WRITE_THROUGH;
     for i in 0..8 {
         let offset = i * 0x200000;
