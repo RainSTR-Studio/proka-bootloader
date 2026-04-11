@@ -67,11 +67,15 @@ pub fn loader_main(bootmode: BootMode) -> ! {
     }
 
     // The kernel start addr
-    let kernel_start: u32 = 0;
+    let kernel_start: u64 = 0xffff800000000000;
 
     // Jump to kernel (BIOS boot only)
     #[cfg(target_os = "none")]
     unsafe {
+        // Split kernel start as 2 parts
+        let kernel_start_low = kernel_start as u32;
+        let kernel_start_high = (kernel_start >> 32) as u32;
+
         // Update GDT_PTR
         GDT_PTR.base = GDT.as_ptr() as u64;
         asm!(
@@ -81,13 +85,10 @@ pub fn loader_main(bootmode: BootMode) -> ! {
         );
         asm!(
             "and esp, 0xFFFFFF00",
-            in("ecx") 0x100000
-        );
-        asm!(
-            "push ecx",
-            "push 0xffff8000",
-            "push {entry:e}",
-            entry = in(reg) kernel_start
+            "push {high}",
+            "push {low}",
+            high = in(reg) kernel_start_high,
+            low = in(reg) kernel_start_low,
         );
         asm!("ljmp $0x8, $2f", "2:", options(att_syntax));
         asm!(
@@ -103,7 +104,6 @@ pub fn loader_main(bootmode: BootMode) -> ! {
 
             // Set up the last work
             "pop rax",
-            "pop rdi",
 
             // Finally, the work are fully completed.
             //
@@ -124,10 +124,8 @@ pub fn loader_main(bootmode: BootMode) -> ! {
         // Because the UEFI is 64-bit, so we can directly jump to kernel without setting up GDT and segment registers.
         // Just jump to the kernel entry point, and pass the boot info as argument in rax
         asm!(
-            "mov rax, 0xffff800000000000",
-            "add rax, rsi",
-            in("rdi") 0x100000,
-            in("rsi") kernel_start,
+            "mov rax, {0}",
+            in(reg) kernel_start,
             options(nomem, nostack)
         );
         asm!("jmp rax");

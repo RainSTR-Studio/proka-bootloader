@@ -77,6 +77,27 @@ pub enum BootMode {
     Uefi,
 }
 
+/// Get the bootinfo.
+///
+/// The BootInfo is pre-copied & fixed at the dedicated constant physical address
+/// 0x100000 by UEFI boot stage, never modified nor released in kernel lifetime.
+///
+/// # Safety
+/// Caller must ensure **before invoking**:
+/// 1. Address `0x100000` is allocated & filled with valid initialized BootInfo;
+/// 2. This range is reserved, never overwritten/freed by kernel/UEFI;
+/// 3. No mutable aliasing exists for this memory region.
+///
+/// These steps are already guaranteed by the bootloader, so invocation is generally safe
+/// in normal kernel runtime.
+///
+/// # Returns
+/// - &'static BootInfo: immutable static reference to the pre-filled BootInfo
+pub const fn get_bootinfo() -> &'static BootInfo {
+    const BI_PHYS: u64 = 0x100000;
+    unsafe { &*(BI_PHYS as *const BootInfo) }
+}
+
 #[cfg(test)]
 fn test_runner(tests: &[&dyn Fn()]) {
     for test in tests {
