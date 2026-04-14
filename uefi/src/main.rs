@@ -10,7 +10,6 @@ use uefi::{
     mem::memory_map::MemoryMapOwned,
     prelude::*,
     println,
-    boot::{AllocateType, MemoryType},
     proto::{
         console::gop::{GraphicsOutput, PixelFormat},
         media::file::{File, FileAttribute, FileInfo, FileMode},
@@ -72,9 +71,6 @@ fn main() -> Status {
     kernel.into_regular_file().unwrap().read(&mut buf).unwrap();
     println!("[INFO] Successfully loaded kernel into 0x200000 (phys) / 0xffff800000000000 (virt).");
 
-    // Now allocate 0x100000~0x1fffff
-    boot::allocate_pages(AllocateType::Address(0x100000), MemoryType::LOADER_DATA, 256).unwrap();
-
     // And get GOP protocol
     println!("[INFO] Getting GOP...");
     let gop_handle = boot::get_handle_for_protocol::<GraphicsOutput>().unwrap();
@@ -106,7 +102,7 @@ fn main() -> Status {
     // Merge them as a Framebuffer struct and put to a fixed address
     let fb = Framebuffer::new(address as u64, width, height, bpp, pitch);
     unsafe {
-        let ptr = 0x110000 as *mut Framebuffer;
+        let ptr = 0x10000 as *mut Framebuffer;
         *ptr = fb;
     }
 
@@ -119,7 +115,7 @@ fn main() -> Status {
     // Since then, the UEFI boot services will be disabled.
     // Copy the memory map to 0x110100
     unsafe {
-        let ptr = 0x110100 as *mut MemoryMapOwned;
+        let ptr = 0x10100 as *mut MemoryMapOwned;
         *ptr = memory_map;
     }
 
