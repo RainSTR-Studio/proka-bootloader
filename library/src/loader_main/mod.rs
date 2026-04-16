@@ -58,10 +58,13 @@ pub fn loader_main(bootmode: BootMode) -> ! {
     // Intergrate them into a BootInfo struct
     let boot_info = BootInfo::new(bootmode, memory_map, framebuffer);
 
-    // Copy to 0x100000
+    // Copy to 0x10000
     unsafe {
+        // Before copy, clear 0x10000~0x1ffff
+        core::ptr::write_bytes(0x10000 as *mut u8, 0, 0xffff);
+
         let src = &boot_info as *const BootInfo;
-        let dst = 0x100000 as *mut BootInfo;
+        let dst = 0x10000 as *mut BootInfo;
         core::ptr::copy(src, dst, 1);
     }
 
