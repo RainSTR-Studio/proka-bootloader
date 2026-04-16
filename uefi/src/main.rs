@@ -37,11 +37,11 @@ fn main() -> Status {
     println!("[INFO] Setting up PAT...");
     unsafe {
         let pat_value: u64 = (PAT_WB) // PAT0: Write Back
-            | (PAT_WT << 8)     // PAT1: Write through
+            | (PAT_WC << 8)     // PAT1: Write through
             | (PAT_UC_MINUS << 16) // PAT2: UC- 
             | (PAT_UC << 24)    // PAT3: Uncachable
             | (PAT_WB << 32)    // PAT4: Write Back
-            | (PAT_WC << 40)    // PAT5: Write Combined
+            | (PAT_WT << 40)    // PAT5: Write Combined
             | (PAT_WP << 48)    // PAT6: Write Protect
             | (0 << 56);        // Reserved
         x86_64::registers::model_specific::Msr::new(IA32_PAT).write(pat_value);

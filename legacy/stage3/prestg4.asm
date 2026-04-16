@@ -30,9 +30,8 @@ prepare_sg4:
 
   ; Set up PAT
   mov ecx, 0x277
-  rdmsr
-  mov eax, 0x06 | (0x04 << 8) | (0x07 << 16) | (0x00 << 24)
-  mov edx, 0x06 | (0x01 << 8) | (0x05 << 16) | (0 << 24)
+  mov eax, 0x06 | (0x01 << 8) | (0x07 << 16) | (0x00 << 24)
+  mov edx, 0x06 | (0x04 << 8) | (0x05 << 16) | (0 << 24)
   wrmsr
 
   ; Enable CR0.PG, WP, TS and EM
