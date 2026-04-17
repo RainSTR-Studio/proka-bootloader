@@ -15,6 +15,7 @@
 pub mod loader_main;
 pub mod output;
 pub mod memory;
+pub mod header;
 use self::output::Framebuffer;
 use self::memory::MemoryMap;
 
@@ -92,7 +93,7 @@ pub enum BootMode {
 /// in normal kernel runtime.
 ///
 /// # Returns
-/// - &'static BootInfo: immutable static reference to the pre-filled BootInfo
+/// - `&'static BootInfo`: immutable static reference to the pre-filled BootInfo
 pub const fn get_bootinfo() -> &'static BootInfo {
     const BI_PHYS: u64 = 0x10000;
     unsafe { &*(BI_PHYS as *const BootInfo) }
