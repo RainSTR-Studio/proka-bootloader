@@ -16,6 +16,7 @@ pub mod loader_main;
 pub mod output;
 pub mod memory;
 pub mod header;
+mod version;
 use self::output::Framebuffer;
 use self::memory::MemoryMap;
 

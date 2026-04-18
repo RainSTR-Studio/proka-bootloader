@@ -32,9 +32,14 @@ PROKA_VERSION dw {ma}, {mi}, {pa}
 """)
 
 # Rust
-with open("build/version.rs", "w") as f:
+with open("library/src/version.rs", "w") as f:
     f.write(f"""
 pub const VERSION: [u16; 3] = [{ma}, {mi}, {pa}];
+""")
+
+with open("build/version.rs", "w") as f:
+    f.write(f"""
+pub const VERSION: [u16; 3] = [{ma}, {mi}, {pa}]; 
 """)
 
 print(f"[INFO] Version {ma}.{mi}.{pa} → build/")
