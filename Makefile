@@ -22,6 +22,7 @@ clean: clean-sub
 	@echo "[INFO] Cleaning up process completed."
 
 prepare:
+	python3 gen_version.py
 	mkdir -p $(OUTPUT_DIR) $(BUILD_DIR)
 
 .PHONY: all legacy uefi clean clean-sub

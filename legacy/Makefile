@@ -11,6 +11,7 @@ SHOULD_LINK := \
 	$(BUILD_DIR)/loadkrnl.o \
 	$(BUILD_DIR)/stage2.o \
 	$(BUILD_DIR)/stage3.o \
+	$(BUILD_DIR)/error.o \
 	$(BUILD_DIR)/prestg4.o \
 	$(BUILD_DIR)/stage4.a
 LINK_TARGET = $(BUILD_DIR)/pkldr.elf

@@ -5,12 +5,14 @@
  * will load kernel and prepare for long mode.
  */
 #include "paging.h"
+#include "../../build/version.h"
 #include <stdbool.h>
 #include <stdint.h>
 
 // Externs
 extern void loadkrnl(void);
 extern void prepare_sg4(void);
+extern void error(uint32_t errcode);
 void init_paging(uint32_t fb_phys);
 
 // Page tables placed at fixed physical addresses (4K aligned)
@@ -35,6 +37,24 @@ void stage3_start(void) {
 
     // Get the VBE phys addr
     uint32_t fb_phys = *(uint32_t*)(0x10000 + 0x28);
+
+    // Do parsing header
+    uint32_t magic = *(uint32_t*)0x200000;
+    if (magic != 0x504B4E4C) {
+    	error(1);
+    }
+
+    uint16_t kmaj = *(uint16_t*)(0x200004);
+    uint16_t kmin = *(uint16_t*)(0x200006);
+    uint16_t kpat = *(uint16_t*)(0x200008);
+
+    // Check is version mismatched
+    if (kmaj != PROKA_VERSION_MAJ ||
+        kmin != PROKA_VERSION_MIN ||
+        kpat != PROKA_VERSION_PAT)
+    {
+        error(2);
+    }
 
     // And paging initializator
     init_paging(fb_phys);
