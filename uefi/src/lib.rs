@@ -79,6 +79,13 @@ pub fn stage1_entry() -> ! {
         let pml4_addr = PhysAddr::new(PML4_ADDR);
         let pml4_frame = PhysFrame::containing_address(pml4_addr);
         Cr3::write(pml4_frame, Cr3Flags::empty());
+
+        core::arch::asm!(
+            "mov rsp, {KERNEL_STACK}",
+            "mov rbp, rsp",
+            KERNEL_STACK = const 0x7c00,
+            options(nomem, nostack)
+        );
     }
 
     // Go to stage2 to officially start the kernel
