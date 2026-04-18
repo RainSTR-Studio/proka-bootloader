@@ -69,7 +69,7 @@ pub fn loader_main(bootmode: BootMode) -> ! {
     }
 
     // The kernel start addr
-    let kernel_start: u64 = 0xffff800000000000;
+    let kernel_start: u64 = 0xffff800000000010;
 
     // Jump to kernel (BIOS boot only)
     #[cfg(target_os = "none")]
