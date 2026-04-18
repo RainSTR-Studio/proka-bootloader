@@ -5,6 +5,7 @@
 #![test_runner(self::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+use proka_bootloader::header::Header;
 use proka_bootloader::output::Framebuffer;
 use uefi::{
     mem::memory_map::MemoryMapOwned,
@@ -16,8 +17,10 @@ use uefi::{
     },
 };
 
+include!("../../build/version.rs");
+
 // PAT constants
-const IA32_PAT: u32 = 0x277; 
+const IA32_PAT: u32 = 0x277;
 const PAT_UC: u64 = 0x00;
 const PAT_WC: u64 = 0x01;
 const PAT_WT: u64 = 0x04;
@@ -43,7 +46,7 @@ fn main() -> Status {
             | (PAT_WB << 32)    // PAT4: Write Back
             | (PAT_WT << 40)    // PAT5: Write Combined
             | (PAT_WP << 48)    // PAT6: Write Protect
-            | (0 << 56);        // Reserved
+            | (0 << 56); // Reserved
         x86_64::registers::model_specific::Msr::new(IA32_PAT).write(pat_value);
     }
     println!("[INFO] Successfully set up PAT, now reading kernel...");
@@ -70,6 +73,24 @@ fn main() -> Status {
     };
     kernel.into_regular_file().unwrap().read(&mut buf).unwrap();
     println!("[INFO] Successfully loaded kernel into 0x200000 (phys) / 0xffff800000000000 (virt).");
+
+    // Verificate kernel
+    let hdr = unsafe { &*(0x200000 as *const Header) };
+    if hdr.magic != 0x504b4e4c {
+        panic!("The kernel that was read is invalid")
+    }
+
+    let kernel_ver: [u16; 3] = unsafe {
+        let hdr_ptr = 0x200000 as *const u8;
+        let ptr = hdr_ptr.add(4) as *const [u16; 3];
+        ptr.read_unaligned()
+    };
+
+    if kernel_ver != VERSION {
+        panic!(
+            "version mismatch"
+        );
+    }
 
     // And get GOP protocol
     println!("[INFO] Getting GOP...");

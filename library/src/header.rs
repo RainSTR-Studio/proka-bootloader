@@ -10,7 +10,7 @@ include!("../../build/version.rs");
 
 #[repr(C, packed)]
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct Header {
+pub struct Header {
     /// The magic number of this header
     pub magic: u32,
 
