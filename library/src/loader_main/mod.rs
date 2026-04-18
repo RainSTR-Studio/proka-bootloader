@@ -140,7 +140,7 @@ pub fn loader_main(bootmode: BootMode) -> ! {
 fn get_framebuffer() -> Framebuffer {
     // Init the VBE info
     let vbe = VBEInfo::load(0x10000); // Put in fixed address in stage2
-    let fb_addr: u64 = 0xffff800040000000u64; // Mapped
+    let fb_addr: u64 = 0xffffe00000000000u64; // Mapped
     let width: u64 = vbe.x_resolution.into();
     let height: u64 = vbe.y_resolution.into();
     let bpp: u64 = (vbe.bits_per_pixel / 8).into();
@@ -257,7 +257,7 @@ fn get_framebuffer() -> Framebuffer {
     let fb_info = unsafe { &*(0x10000 as *const Framebuffer) };
 
     // Rebuild the framebuffer struct
-    let addr = 0xffff800040000000u64; // Mapped
+    let addr = 0xffffe00000000000u64; // Mapped
     let width = fb_info.width();
     let height = fb_info.height();
     let bpp = fb_info.bpp();

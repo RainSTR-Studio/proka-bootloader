@@ -19,13 +19,15 @@ void init_paging(uint32_t fb_phys);
 #define PML4_PADDR 0x60000
 #define PDPT_LOW_PADDR 0x61000
 #define PDPT_HIGH_PADDR 0x62000
-#define PDT_LOW_PADDR 0x63000
-#define PDT_HIGH_PADDR 0x64000
-#define PDT_FB_PADDR 0x65000
+#define PDPT_FB_PADDR 0x63000
+#define PDT_LOW_PADDR 0x64000
+#define PDT_HIGH_PADDR 0x65000
+#define PDT_FB_PADDR 0x66000
 
 PML4 *pml4 = (PML4 *)PML4_PADDR;
 PDPT *pdpt_low = (PDPT *)PDPT_LOW_PADDR;
 PDPT *pdpt_high = (PDPT *)PDPT_HIGH_PADDR;
+PDPT *pdpt_fb = (PDPT *)PDPT_FB_PADDR;
 PDT *pdt_low = (PDT *)PDT_LOW_PADDR;
 PDT *pdt_high = (PDT *)PDT_HIGH_PADDR;
 PDT *pdt_fb = (PDT *)PDT_FB_PADDR;
@@ -77,6 +79,12 @@ void init_paging(uint32_t fb_phys) {
     pml4->entries[256].nx = 0;
     pml4->entries[256].pfn = PDPT_HIGH_PADDR >> 12;
 
+    pml4->entries[448].value = 0;
+    pml4->entries[448].present = 1;
+    pml4->entries[448].writable = 1;
+    pml4->entries[448].nx = 0;
+    pml4->entries[448].pfn = PDPT_FB_PADDR >> 12;
+
     // Write the low PDPT table
     pdpt_low->entries[0].value = 0;
     pdpt_low->entries[0].present = 1;
@@ -84,13 +92,13 @@ void init_paging(uint32_t fb_phys) {
     pdpt_low->entries[0].nx = 0;
     pdpt_low->entries[0].pfn = PDT_LOW_PADDR >> 12;
 
-    // Write the low PDT table (0x20000~0x21FFFF)
+    // Write the low PDT table (0x000000~0x1FFFFF)
     pdt_low->entries[0].value = 0;
     pdt_low->entries[0].present = 1;
     pdt_low->entries[0].writable = 1;
     pdt_low->entries[0].huge = 1;
     pdt_low->entries[0].nx = 0;
-    pdt_low->entries[0].pfn = 0 >> 12; // PA=0x20000
+    pdt_low->entries[0].pfn = 0 >> 12; // PA=0x000000
 
     // Write the high PDPT table
     pdpt_high->entries[0].value = 0;
@@ -99,11 +107,11 @@ void init_paging(uint32_t fb_phys) {
     pdpt_high->entries[0].nx = 0;
     pdpt_high->entries[0].pfn = PDT_HIGH_PADDR >> 12;
    
-    pdpt_high->entries[1].value = 0; 
-    pdpt_high->entries[1].present = 1;
-    pdpt_high->entries[1].writable = 1;
-    pdpt_high->entries[1].nx = 0;
-    pdpt_high->entries[1].pfn = PDT_FB_PADDR >> 12;
+    pdpt_fb->entries[0].value = 0; 
+    pdpt_fb->entries[0].present = 1;
+    pdpt_fb->entries[0].writable = 1;
+    pdpt_fb->entries[0].nx = 0;
+    pdpt_fb->entries[0].pfn = PDT_FB_PADDR >> 12;
     
     // Write the high PDT table (128MiB, 64 entries)
     for (uint64_t i = 0; i < 64; i++) {

@@ -8,7 +8,8 @@
 const PML4_ADDR: u64 = 0x20000;
 const PDPT_HIGH_ADDR: u64 = 0x21000;
 const PDT_HIGH_ADDR: u64 = 0x22000;
-const PDT_FB_ADDR: u64 = 0x23000;
+const PDPT_FB_ADDR: u64 = 0x23000;
+const PDT_FB_ADDR: u64 = 0x24000;
 
 use proka_bootloader::loader_main::loader_main;
 use proka_bootloader::{BootMode, output::Framebuffer};
@@ -39,6 +40,7 @@ pub fn stage1_entry() -> ! {
     let pdpt_high = unsafe { &mut *(PDPT_HIGH_ADDR as *mut PageTable) };
     let pdt_high = unsafe { &mut *(PDT_HIGH_ADDR as *mut PageTable) };
     let pdt_fb = unsafe { &mut *(PDT_FB_ADDR as *mut PageTable) };
+    let pdpt_fb = unsafe { &mut *(PDPT_FB_ADDR as *mut PageTable) };
 
     // Fill all entries
     // Identity mapping for 0x0 ~ 0x1FFFFF
@@ -65,11 +67,12 @@ pub fn stage1_entry() -> ! {
     // Then map the PDPT page
     let pdpt_flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
     pdpt_high[0].set_addr(PhysAddr::new(PDT_HIGH_ADDR), pdpt_flags);
-    pdpt_high[1].set_addr(PhysAddr::new(PDT_FB_ADDR), pdpt_flags);
+    pdpt_fb[0].set_addr(PhysAddr::new(PDT_FB_ADDR), pdpt_flags);
 
     // Finally, map the PML4 page
     let pml4_flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
     pml4[256].set_addr(PhysAddr::new(PDPT_HIGH_ADDR), pml4_flags);
+    pml4[448].set_addr(PhysAddr::new(PDPT_FB_ADDR), pml4_flags);
 
     // Load the new page table
     unsafe {
