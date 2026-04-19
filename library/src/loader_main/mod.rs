@@ -68,6 +68,9 @@ pub fn loader_main(bootmode: BootMode) -> ! {
         core::ptr::copy(src, dst, 1);
     }
 
+    // drop
+    drop(boot_info);
+
     // The kernel start addr
     let kernel_start: u64 = 0xffff800000000010;
 

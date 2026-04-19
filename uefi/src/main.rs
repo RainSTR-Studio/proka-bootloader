@@ -88,7 +88,16 @@ fn main() -> Status {
 
     if kernel_ver != VERSION {
         panic!(
-            "version mismatch"
+            "The version is mismatched.\n\
+            Expected version {}.{}.{}, \
+            but {}.{}.{} was found.
+            ",
+            VERSION[0],
+            VERSION[1],
+            VERSION[2],
+            kernel_ver[0],
+            kernel_ver[1],
+            kernel_ver[2],
         );
     }
 
