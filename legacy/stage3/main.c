@@ -16,13 +16,13 @@ extern void error(uint32_t errcode);
 void init_paging(uint32_t fb_phys);
 
 // Page tables placed at fixed physical addresses (4K aligned)
-#define PML4_PADDR 0x60000
-#define PDPT_LOW_PADDR 0x61000
-#define PDPT_HIGH_PADDR 0x62000
-#define PDPT_FB_PADDR 0x63000
-#define PDT_LOW_PADDR 0x64000
-#define PDT_HIGH_PADDR 0x65000
-#define PDT_FB_PADDR 0x66000
+#define PML4_PADDR 0x40000
+#define PDPT_LOW_PADDR 0x41000
+#define PDPT_HIGH_PADDR 0x42000
+#define PDPT_FB_PADDR 0x43000
+#define PDT_LOW_PADDR 0x44000
+#define PDT_HIGH_PADDR 0x45000
+#define PDT_FB_PADDR 0x46000
 
 PML4 *pml4 = (PML4 *)PML4_PADDR;
 PDPT *pdpt_low = (PDPT *)PDPT_LOW_PADDR;

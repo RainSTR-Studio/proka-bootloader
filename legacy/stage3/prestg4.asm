@@ -14,7 +14,7 @@ prepare_sg4:
   ; Now ready to enable long mode
 
   ; Setup page table
-  mov eax, 0x60000  ; Hard-coded in C
+  mov eax, 0x40000  ; Hard-coded in C
   mov cr3, eax
 
   ; Enable CR4.PAE, PGE, OSFXSR, OSXMMEXCPT
