@@ -1,2 +1,2 @@
 
-pub const VERSION: [u16; 3] = [0, 4, 1];
+pub const VERSION: [u16; 3] = [0, 4, 2];

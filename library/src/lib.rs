@@ -22,7 +22,7 @@ use self::memory::MemoryMap;
 
 /// This struct is the boot information struct, which provides
 /// the basic information, *memory map*, and so on.
-#[repr(C, packed)]
+#[repr(C)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BootInfo {
     /// The boot mode, see the [`BootMode`] enum.
@@ -47,18 +47,18 @@ impl BootInfo {
     }
 
     /// Get the boot mode.
-    pub const fn boot_mode(&self) -> BootMode {
-        self.boot_mode
+    pub const fn boot_mode(&self) -> &BootMode {
+        &self.boot_mode
     }
 
     /// Get the framebuffer info.
-    pub const fn framebuffer(&self) -> Framebuffer {
-        self.framebuffer
+    pub const fn framebuffer(&self) -> &Framebuffer {
+        &self.framebuffer
     }
 
     /// Get the memory map.
-    pub const fn memory(&self) -> MemoryMap {
-        self.memmap
+    pub const fn memory(&self) -> &MemoryMap {
+        &self.memmap
     }
 }
 
