@@ -205,7 +205,7 @@ is_first_read db 1
 current_cluster dd 0
 complete_read db 0
 fat32_spc db 0
-dest_current dd 0x3200000
+dest_current dd 0x2200000
 
 ; Initprt filename (8.3)
 initprt_filename db 'INITPRT IMG'

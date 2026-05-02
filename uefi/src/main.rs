@@ -60,7 +60,7 @@ fn main() -> Status {
     let mut root = fs.open_volume().unwrap();
     let mut kernel = root
         .open(kernel_path, FileMode::Read, FileAttribute::empty())
-        .unwrap();
+        .expect("Kernel not found");
 
     // And get the kernel size
     let infobuf: &mut [u8; 1024] = &mut [0; 1024]; // 1024 bytes for file info
@@ -73,6 +73,21 @@ fn main() -> Status {
     };
     kernel.into_regular_file().unwrap().read(&mut buf).unwrap();
     println!("[INFO] Successfully loaded kernel into 0x200000 (phys) / 0xffff800000000000 (virt).");
+
+    // Read the initprt from FAT32 partition, and put it to 0x2200000
+    let initprt_path = cstr16!("\\initprt.img");
+    let mut initprt = root
+        .open(initprt_path, FileMode::Read, FileAttribute::empty())
+        .expect("Initprt not found");
+    // And get the initprt size
+    let infobuf: &mut [u8; 1024] = &mut [0; 1024]; // 1024 bytes for file info
+    let info = initprt.get_info::<FileInfo>(infobuf).unwrap();
+    let size = info.file_size() as usize; // Copy to the target address
+    let mut buf = unsafe { core::slice::from_raw_parts_mut(0x2200000 as *mut u8, size) };
+    initprt.into_regular_file().unwrap().read(&mut buf).unwrap();
+    println!(
+        "[INFO] Successfully loaded initprt into 0x2200000 (phys) / 0xffff800002000000 (virt)."
+    );
 
     // Verificate kernel
     let hdr = unsafe { &*(0x200000 as *const Header) };
@@ -92,12 +107,7 @@ fn main() -> Status {
             Expected version {}.{}.{}, \
             but {}.{}.{} was found.
             ",
-            VERSION[0],
-            VERSION[1],
-            VERSION[2],
-            kernel_ver[0],
-            kernel_ver[1],
-            kernel_ver[2],
+            VERSION[0], VERSION[1], VERSION[2], kernel_ver[0], kernel_ver[1], kernel_ver[2],
         );
     }
 
