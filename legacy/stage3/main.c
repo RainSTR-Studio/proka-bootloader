@@ -11,6 +11,7 @@
 
 // Externs
 extern void loadkrnl(void);
+extern void loadinit(void);
 extern void prepare_sg4(void);
 extern void error(uint32_t errcode);
 void init_paging(uint32_t fb_phys);
@@ -34,8 +35,9 @@ PDT *pdt_fb = (PDT *)PDT_FB_PADDR;
 
 // Stage3 main entry point
 void stage3_start(void) {
-    // Invoke the load kernel in assembly
+    // Invoke the load kernel and initprt in assembly
     loadkrnl();
+    loadinit();
 
     // Get the VBE phys addr
     uint32_t fb_phys = *(uint32_t*)(0x10000 + 0x28);

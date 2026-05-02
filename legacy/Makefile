@@ -9,6 +9,7 @@ LDFLAGS = -m elf_i386 -T linker.ld \
 	  --accept-unknown-input-arch
 SHOULD_LINK := \
 	$(BUILD_DIR)/loadkrnl.o \
+	$(BUILD_DIR)/loadinit.o \
 	$(BUILD_DIR)/stage2.o \
 	$(BUILD_DIR)/stage3.o \
 	$(BUILD_DIR)/error.o \
