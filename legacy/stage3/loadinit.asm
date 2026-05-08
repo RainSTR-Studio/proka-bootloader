@@ -48,7 +48,7 @@ back_protected_mode:
   ; Just copy the content from buffer to destination
   ; address!
   mov edi, [dest_current + 0x20000]  ; Destination (0x200000)
-  mov esi, 0x88000  ; Source (0x88000)
+  mov esi, 0x78000  ; Source
   movzx ecx, byte [fat32_spc + 0x20000]
   shl ecx, 9  ; SPC x 512 = 1 cluster bytes
 
@@ -138,9 +138,9 @@ real_mode_entry:
 
 .read:
   ; Set up segment 
-  ; The file buffer is 0x88000~0x8FFFF, so segment 
-  ; is 0x8800 
-  mov cx, 0x8800
+  ; The file buffer is 0x78000~0x7FFFF, so segment 
+  ; is 0x7800 
+  mov cx, 0x7800
   mov es, cx
   xor bx, bx
   mov eax, [current_cluster]
