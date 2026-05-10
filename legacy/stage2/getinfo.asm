@@ -32,12 +32,12 @@ get_memory_map:
   mov si, msg_get_memmap
   call print
 
-  ; We want physical address 0x10100 ~
-  ; So set ES = 0x1010, offset 0x0000 = phys 0x10100
-  mov ax, 0x1010
+  ; We want physical address 0x10200 ~
+  ; So set ES = 0x1020, offset 0x0000 = phys 0x10200
+  mov ax, 0x1020
   mov es, ax
 
-  ; DI = 0x0000 → ES:DI = 0x1010:0000 = physical 0x10100
+  ; DI = 0x0000 → ES:DI = 0x1020:0000 = physical 0x10200
   mov di, 0x0000
   xor bx, bx          ; Start with first entry
   xor bp, bp          ; Entry counter

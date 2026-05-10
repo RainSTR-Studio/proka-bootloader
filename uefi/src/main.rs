@@ -15,6 +15,8 @@ use uefi::{
         console::gop::{GraphicsOutput, PixelFormat},
         media::file::{File, FileAttribute, FileInfo, FileMode},
     },
+    system::with_config_table,
+    table::cfg::ConfigTableEntry,
 };
 
 include!("../../build/version.rs");
@@ -111,6 +113,24 @@ fn main() -> Status {
         );
     }
 
+    // And get ACPI...
+    //
+    // If ACPI2 not found, then use ACPI1.
+    println!("[INFO] Getting ACPI table...");
+    with_config_table(|slice| {
+        let rsdp = slice
+            .iter()
+            .find(|e| e.guid == ConfigTableEntry::ACPI2_GUID)
+            .or_else(|| slice.iter().find(|e| e.guid == ConfigTableEntry::ACPI_GUID));
+
+        if let Some(entry) = rsdp {
+            unsafe {
+                println!("ACPI addr: {}", entry.address as u64);
+                *(0x10100 as *mut u64) = entry.address as u64;
+            }
+        }
+    });
+
     // And get GOP protocol
     println!("[INFO] Getting GOP...");
     let gop_handle = boot::get_handle_for_protocol::<GraphicsOutput>().unwrap();
@@ -153,9 +173,9 @@ fn main() -> Status {
     };
 
     // Since then, the UEFI boot services will be disabled.
-    // Copy the memory map to 0x110100
+    // Copy the memory map to 0x10200
     unsafe {
-        let ptr = 0x10100 as *mut MemoryMapOwned;
+        let ptr = 0x10200 as *mut MemoryMapOwned;
         *ptr = memory_map;
     }
 

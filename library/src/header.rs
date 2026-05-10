@@ -37,7 +37,7 @@ pub struct Header {
 impl Header {
     pub const fn default() -> Self {
         Self {
-            magic: 0x504b4e4c,  // PKNL
+            magic: 0x504b4e4c, // PKNL
             version: VERSION,
             _reserved: [0u8; 6],
         }

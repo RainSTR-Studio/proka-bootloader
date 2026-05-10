@@ -1,6 +1,6 @@
 //! This crate provides the struct, enums about the Proka
 //! bootloader, including the boot information, and so on.
-//! 
+//!
 //! # About proka bootloader
 //! Well, this bootloader is for Proka Kernel, which will obey
 //! its standard. For more information, see <url>.
@@ -11,24 +11,24 @@
 #![test_runner(self::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+pub mod header;
 #[cfg(feature = "loader_main")]
 pub mod loader_main;
-pub mod output;
 pub mod memory;
-pub mod header;
+pub mod output;
 mod version;
-use self::output::Framebuffer;
 use self::memory::MemoryMap;
+use self::output::Framebuffer;
 
 /// This struct is the boot information struct, which provides
 /// the basic information, *memory map*, and so on.
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BootInfo {
-    /// The boot mode, see the [`BootMode`] enum.
     boot_mode: BootMode,
     framebuffer: Framebuffer,
     memmap: MemoryMap,
+    acpi_addr: u64,
 }
 
 impl BootInfo {
@@ -38,11 +38,12 @@ impl BootInfo {
     /// automatically, so if you are a kernel developer, do
     /// not use this method, because you needn't and unusable.
     #[cfg(feature = "loader_main")]
-    pub fn new(boot_mode: BootMode, memmap: MemoryMap, fb: Framebuffer) -> Self {
+    pub fn new(boot_mode: BootMode, memmap: MemoryMap, fb: Framebuffer, acpi_addr: u64) -> Self {
         Self {
             boot_mode,
+            acpi_addr,
             memmap,
-            framebuffer: fb
+            framebuffer: fb,
         }
     }
 
@@ -59,6 +60,11 @@ impl BootInfo {
     /// Get the memory map.
     pub const fn memory(&self) -> &MemoryMap {
         &self.memmap
+    }
+
+    /// Get the ACPI RSDP's address.
+    pub const fn acpi(&self) -> u64 {
+        self.acpi_addr
     }
 }
 

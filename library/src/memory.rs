@@ -1,5 +1,5 @@
 //! The generic memory module, which provides memory info to
-//! kernel, so that kernel can know the memory structure 
+//! kernel, so that kernel can know the memory structure
 //! easily.
 
 /// The generic Memory Map, which can contains 128 memory map
@@ -25,7 +25,7 @@ pub struct MemoryEntry {
     pub length: u64,
 
     /// The type of this memory region
-    pub mem_type: MemoryType
+    pub mem_type: MemoryType,
 }
 
 /// The memory type.

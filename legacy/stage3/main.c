@@ -5,6 +5,7 @@
  * will load kernel and prepare for long mode.
  */
 #include "paging.h"
+#include "acpi.h"
 #include "../../build/version.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -15,6 +16,7 @@ extern void loadinit(void);
 extern void prepare_sg4(void);
 extern void error(uint32_t errcode);
 void init_paging(uint32_t fb_phys);
+RSDP *find_rsdp(void);
 
 // Page tables placed at fixed physical addresses (4K aligned)
 #define PML4_PADDR 0x40000
@@ -59,6 +61,18 @@ void stage3_start(void) {
     {
         error(2);
     }
+
+    // And scan RSDP
+    RSDP *ptr = find_rsdp();
+
+    // Check: is RSDP null
+    if (!ptr) {
+        // No ACPI found...
+	error(3);
+    }
+
+    // Save to 0x10100
+    *(volatile uint64_t *)0x10100 = (uint64_t)(uint32_t)ptr;
 
     // And paging initializator
     init_paging(fb_phys);
@@ -133,4 +147,29 @@ void init_paging(uint32_t fb_phys) {
 	pdt_fb->entries[i].write_through = 1;
         pdt_fb->entries[i].pfn = (fb_phys + i * 0x200000) >> 12;
     }
+}
+
+RSDP *find_rsdp(void) {
+    // Scan EBDA
+    uint16_t ebda_seg = *(uint16_t *)0x40E;
+    uintptr_t ebda = (uintptr_t)ebda_seg << 4;
+
+    for (uintptr_t p = ebda; p < ebda + 1024; p += 16) {
+        if (sig_match((void *)p, RSDP_SIG, 8)) {
+            RSDP *cand = (RSDP *)p;
+            if (rsdp_validate(cand))
+                return cand;
+        }
+    }
+
+    // Scan 0xE0000~0xFFFFF
+    for (uintptr_t p = 0xE0000; p <= 0xFFFFF; p += 16) {
+        if (sig_match((void *)p, RSDP_SIG, 8)) {
+            RSDP *cand = (RSDP *)p;
+            if (rsdp_validate(cand))
+                return cand;
+        }
+    }
+
+    return 0;
 }

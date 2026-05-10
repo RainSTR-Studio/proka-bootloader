@@ -54,9 +54,10 @@ pub fn loader_main(bootmode: BootMode) -> ! {
     // Get the essential information for kernel
     let framebuffer = get_framebuffer();
     let memory_map = get_memory_map();
+    let acpi_addr = unsafe { *(0x10100 as *const u64) };
 
     // Intergrate them into a BootInfo struct
-    let boot_info = BootInfo::new(bootmode, memory_map, framebuffer);
+    let boot_info = BootInfo::new(bootmode, memory_map, framebuffer, acpi_addr);
 
     // Copy to 0x10000
     unsafe {
@@ -120,7 +121,6 @@ pub fn loader_main(bootmode: BootMode) -> ! {
 
             out(reg) _,
             out("rax") _,
-            out("rdi") _,
         );
     }
 
@@ -158,7 +158,7 @@ fn get_framebuffer() -> Framebuffer {
 fn get_memory_map() -> MemoryMap {
     // Load E820 map from the standard location
     // The E820 map is typically stored at address 0x1000 by the bootloader
-    let e820_map = E820Map::load(0x10100);
+    let e820_map = E820Map::load(0x10200);
 
     let mut memory_map = MemoryMap {
         count: 0,
@@ -210,7 +210,7 @@ fn get_memory_map() -> MemoryMap {
 #[cfg(target_os = "uefi")]
 fn get_memory_map() -> MemoryMap {
     // Get the uefi memory map first
-    let memory_map_uefi = unsafe { &*(0x10100 as *const MemoryMapOwned) };
+    let memory_map_uefi = unsafe { &*(0x10200 as *const MemoryMapOwned) };
 
     // Init basic struct
     let mut memory_map = MemoryMap {
@@ -227,15 +227,16 @@ fn get_memory_map() -> MemoryMap {
     for entry in entries {
         // Convert uefi memory type to our memory type (will more implement later)
         let mem_type = match entry.ty {
-            UefiMemoryType::CONVENTIONAL |
-            UefiMemoryType::LOADER_CODE  | 
-            UefiMemoryType::LOADER_DATA => MemoryType::FreeRAM,
+            UefiMemoryType::CONVENTIONAL
+            | UefiMemoryType::LOADER_CODE
+            | UefiMemoryType::LOADER_DATA => MemoryType::FreeRAM,
             UefiMemoryType::RESERVED => MemoryType::Reserved,
             UefiMemoryType::MMIO => MemoryType::Reserved,
             UefiMemoryType::ACPI_RECLAIM => MemoryType::AcpiReclaim,
             UefiMemoryType::ACPI_NON_VOLATILE => MemoryType::AcpiNvs,
-            UefiMemoryType::BOOT_SERVICES_CODE | 
-            UefiMemoryType::BOOT_SERVICES_DATA => MemoryType::FreeRAM,  // UEFI crate said it's free RAM in OS
+            UefiMemoryType::BOOT_SERVICES_CODE | UefiMemoryType::BOOT_SERVICES_DATA => {
+                MemoryType::FreeRAM
+            } // UEFI crate said it's free RAM in OS
             _ => MemoryType::BadMemory, // Treat other types as bad memory
         };
 
@@ -265,6 +266,6 @@ fn get_framebuffer() -> Framebuffer {
     let height = fb_info.height();
     let bpp = fb_info.bpp();
     let pitch = fb_info.pitch();
-    
+
     Framebuffer::new(addr, width, height, bpp, pitch)
 }
