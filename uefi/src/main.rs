@@ -85,10 +85,10 @@ fn main() -> Status {
     let infobuf: &mut [u8; 1024] = &mut [0; 1024]; // 1024 bytes for file info
     let info = initprt.get_info::<FileInfo>(infobuf).unwrap();
     let size = info.file_size() as usize; // Copy to the target address
-    let mut buf = unsafe { core::slice::from_raw_parts_mut(0x2200000 as *mut u8, size) };
+    let mut buf = unsafe { core::slice::from_raw_parts_mut(0x3200000 as *mut u8, size) };
     initprt.into_regular_file().unwrap().read(&mut buf).unwrap();
     println!(
-        "[INFO] Successfully loaded initprt into 0x2200000 (phys) / 0xffff800002000000 (virt)."
+        "[INFO] Successfully loaded initprt into 0x3200000 (phys) / 0xffff800002000000 (virt)."
     );
 
     // Verificate kernel
