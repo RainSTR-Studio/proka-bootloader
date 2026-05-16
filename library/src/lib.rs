@@ -1,4 +1,4 @@
-//! # Proka Executable - The definition of the proka bootloadeirutable
+//! # Proka Bootloader - The bootloader of ProkaOS
 //!
 //! [![Rust Nightly](https://img.shields.io/badge/rust-nightly-orange?style=flat-square&logo=rust)](https://www.rust-lang.org/)
 //! [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-yellow.svg?style=flat-square)](https://opensource.org/license/gpl-3.0)
