@@ -1,10 +1,69 @@
+//! # Proka Executable - The definition of the proka bootloadeirutable
+//!
+//! [![Rust Nightly](https://img.shields.io/badge/rust-nightly-orange?style=flat-square&logo=rust)](https://www.rust-lang.org/)
+//! [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-yellow.svg?style=flat-square)](https://opensource.org/license/gpl-3.0)
+//! [![GitHub Stars](https://img.shields.io/github/stars/RainSTR-Studio/proka-bootloader?style=flat-square)](https://github.com/RainSTR-Studio/proka-bootloader/stargazers)
+//! [![GitHub Issues](https://img.shields.io/github/issues/RainSTR-Studio/proka-bootloader?style=flat-square)](https://github.com/RainSTR-Studio/proka-bootloader/issues)
+//! [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/RainSTR-Studio/proka-bootloader?style=flat-square)](https://github.com/RainSTR-Studio/proka-bootloader/pulls)
+//! [![Documentation](https://img.shields.io/badge/docs-prokadoc-brightgreen?style=flat-square)](https://prokadoc.pages.dev/)
+//!
+//!**Copyright (C) 2026 RainSTR Studio. All rights reserved.**
+//!
+//!---
+//!
+//! ## Introduction
 //! This crate provides the struct, enums about the Proka
 //! bootloader, including the boot information, and so on.
 //!
-//! # About proka bootloader
-//! Well, this bootloader is for Proka Kernel, which will obey
-//! its standard. For more information, see <url>.
-
+//! # Example
+//! Here's an example to use this crateb
+//!
+//! ```rust
+//! #![no_std]
+//! #![no_main]
+//! #![feature(custom_test_frameworks)]
+//! #![test_runner(self::test_runner)]
+//! #![reexport_test_harness_main = "test_main"]
+//!
+//! use proka_bootloader::BootInfo;
+//! use core::panic::PanicInfo;
+//!
+//! // Panic handler
+//! #[panic_handler]
+//! pub fn panic(_: &PanicInfo) -> ! {
+//!     loop {}
+//! }
+//! #[unsafe(no_mangle)]
+//! #[unsafe(link_section = ".text")]
+//! pub extern "C" fn kernel_main() -> ! {
+//!     let info = proka_bootloader::get_bootinfo();
+//!     let framebuffer = info.framebuffer();
+//!     unsafe {
+//!         let ptr = framebuffer.address() as *mut u8;     
+//!         for i in 0..500 {   
+//!             let offset = framebuffer.pitch() * i + i * framebuffer.bpp();
+//!             ptr.add(offset as usize).cast::<u32>().write(0x00FFFFFF);
+//!         }
+//!     }
+//!     loop {}
+//! }
+//! // Test runner
+//! #[cfg(test)]
+//! fn test_runner(tests: &[&'static dyn Fn()]) {
+//!     for test in tests {
+//!         test();
+//!     }
+//! }
+//! ```
+//!
+//! //! # LICENSE
+//! This crate is under license [GPL-v3](https://github.com/RainSTR-Studio/proka-exec/blob/main/LICENSE),
+//! and you must follow its rules.
+//!
+//! See [LICENSE](https://github.com/RainSTR-Studio/proka-exec/blob/main/LICENSE) file for more details.
+//!
+//! ## MSRV
+//! This crate's MSRV is `1.85.0` stable.
 #![no_std]
 #![no_main]
 #![feature(custom_test_frameworks)]
