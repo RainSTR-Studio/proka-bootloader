@@ -52,25 +52,24 @@ static mut GDT_PTR: GdtPtr = GdtPtr {
 /// the boot mode, only Legacy and Uefi are legal
 pub fn loader_main(bootmode: BootMode) -> ! {
     // Get the essential information for kernel
-    let framebuffer = get_framebuffer();
-    let memory_map = get_memory_map();
-    let acpi_addr = unsafe { *(0x10100 as *const u64) };
+    {
+        let framebuffer = get_framebuffer();
+        let memory_map = get_memory_map();
+        let acpi_addr = unsafe { *(0x10100 as *const u64) };
 
-    // Intergrate them into a BootInfo struct
-    let boot_info = BootInfo::new(bootmode, memory_map, framebuffer, acpi_addr);
+        // Intergrate them into a BootInfo struct
+        let boot_info = BootInfo::new(bootmode, memory_map, framebuffer, acpi_addr);
 
-    // Copy to 0x10000
-    unsafe {
-        // Before copy, clear 0x10000~0x1ffff
-        core::ptr::write_bytes(0x10000 as *mut u8, 0, 0xffff);
+        // Copy to 0x10000
+        unsafe {
+            // Before copy, clear 0x10000~0x1ffff
+            core::ptr::write_bytes(0x10000 as *mut u8, 0, 0xffff);
 
-        let src = &boot_info as *const BootInfo;
-        let dst = 0x10000 as *mut BootInfo;
-        core::ptr::copy(src, dst, 1);
+            let src = &boot_info as *const BootInfo;
+            let dst = 0x10000 as *mut BootInfo;
+            core::ptr::copy(src, dst, 1);
+        }
     }
-
-    // drop
-    drop(boot_info);
 
     // The kernel start addr
     let kernel_start: u64 = 0xffff800000000010;

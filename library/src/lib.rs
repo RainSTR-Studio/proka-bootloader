@@ -24,15 +24,16 @@
 //! #![feature(custom_test_frameworks)]
 //! #![test_runner(self::test_runner)]
 //! #![reexport_test_harness_main = "test_main"]
-//!
+//! 
 //! use proka_bootloader::BootInfo;
 //! use core::panic::PanicInfo;
-//!
+//! 
 //! // Panic handler
 //! #[panic_handler]
 //! pub fn panic(_: &PanicInfo) -> ! {
 //!     loop {}
 //! }
+//! 
 //! #[unsafe(no_mangle)]
 //! #[unsafe(link_section = ".text")]
 //! pub extern "C" fn kernel_main() -> ! {
@@ -47,6 +48,7 @@
 //!     }
 //!     loop {}
 //! }
+//! 
 //! // Test runner
 //! #[cfg(test)]
 //! fn test_runner(tests: &[&'static dyn Fn()]) {
