@@ -7,17 +7,17 @@
 //! [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/RainSTR-Studio/proka-bootloader?style=flat-square)](https://github.com/RainSTR-Studio/proka-bootloader/pulls)
 //! [![Documentation](https://img.shields.io/badge/docs-prokadoc-brightgreen?style=flat-square)](https://prokadoc.pages.dev/)
 //!
-//!**Copyright (C) 2026 RainSTR Studio. All rights reserved.**
+//! **Copyright (C) 2026 RainSTR Studio. All rights reserved.**
 //!
-//!---
+//! ---
 //!
 //! ## Introduction
-//! This crate provides the struct, enums about the Proka
-//! bootloader, including the boot information, and so on.
+//! This crate provides the struct, enums about the proka
+//! bootloader, including the boot information, memory map, and so on.
 //!
-//! # Example
-//! Here's an example to use this crateb
-//!
+//! ## Example
+//! Here's an example to use this crate:
+//! 
 //! ```rust
 //! #![no_std]
 //! #![no_main]
@@ -39,6 +39,8 @@
 //! pub extern "C" fn kernel_main() -> ! {
 //!     let info = proka_bootloader::get_bootinfo();
 //!     let framebuffer = info.framebuffer();
+//!
+//!     // Draw a straight line...
 //!     unsafe {
 //!         let ptr = framebuffer.address() as *mut u8;     
 //!         for i in 0..500 {   
@@ -58,7 +60,7 @@
 //! }
 //! ```
 //!
-//! //! # LICENSE
+//! ## LICENSE
 //! This crate is under license [GPL-v3](https://github.com/RainSTR-Studio/proka-exec/blob/main/LICENSE),
 //! and you must follow its rules.
 //!
@@ -83,7 +85,7 @@ use self::output::Framebuffer;
 
 /// This struct is the boot information struct, which provides
 /// the basic information, *memory map*, and so on.
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BootInfo {
     boot_mode: BootMode,
@@ -109,8 +111,8 @@ impl BootInfo {
     }
 
     /// Get the boot mode.
-    pub const fn boot_mode(&self) -> &BootMode {
-        &self.boot_mode
+    pub const fn boot_mode(&self) -> BootMode {
+        self.boot_mode
     }
 
     /// Get the framebuffer info.
@@ -157,12 +159,13 @@ pub enum BootMode {
 /// 2. This range is reserved, never overwritten/freed by kernel/UEFI;
 /// 3. No mutable aliasing exists for this memory region.
 ///
-/// These steps are already guaranteed by the bootloader, so invocation is generally safe
-/// in normal kernel runtime.
+/// # Note
+/// Once the kernel do remapping, i suggest that map that region as `PRESENT`, 
+/// no `WRITABLE`.
 ///
 /// # Returns
 /// - `&'static BootInfo`: immutable static reference to the pre-filled BootInfo
-pub const fn get_bootinfo() -> &'static BootInfo {
+pub const unsafe fn get_bootinfo() -> &'static BootInfo {
     const BI_PHYS: u64 = 0x10000;
     unsafe { &*(BI_PHYS as *const BootInfo) }
 }
