@@ -1,5 +1,5 @@
 # Proka Bootloader - Boot Sector Build Script
-# Copyright (C) 2026 RainSTR Studio. All rights reserved.
+# Copyright (C) 2026 RainSTR Studio. Licensed under GNU GPLv3.
 #
 # Compiles MBR and stage2 bootloader into raw binary files.
 

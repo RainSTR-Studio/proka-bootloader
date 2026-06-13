@@ -1,5 +1,5 @@
 # Proka Bootloader - Driver Build Script
-# Copyright (C) 2026 RainSTR Studio. All rights reserved.
+# Copyright (C) 2026 RainSTR Studio. Licensed under GNU GPLv3.
 #
 # Compiles the stage4 code file
 
