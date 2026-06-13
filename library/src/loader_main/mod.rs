@@ -109,6 +109,8 @@ pub fn loader_main(bootmode: BootMode) -> ! {
 
             // Set up the last work
             "pop rax",
+            "mov rsp, 0xffff800002fff000",
+            "mov rbp, rsp",
 
             // Finally, the work are fully completed.
             //
@@ -129,10 +131,11 @@ pub fn loader_main(bootmode: BootMode) -> ! {
         // Just jump to the kernel entry point, and pass the boot info as argument in rax
         asm!(
             "mov rax, {0}",
+            "mov rsp, 0xffff800002fff000",
+            "mov rbp, rsp",
             in(reg) kernel_start,
-            options(nomem, nostack)
         );
-        asm!("jmp rax");
+        asm!("jmp rax")
     }
 
     loop {}
