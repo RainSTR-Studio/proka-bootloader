@@ -5,6 +5,8 @@
 #![test_runner(self::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+mod version;
+use version::VERSION;
 use proka_bootloader::header::Header;
 use proka_bootloader::output::Framebuffer;
 use uefi::{
@@ -18,8 +20,6 @@ use uefi::{
     system::with_config_table,
     table::cfg::ConfigTableEntry,
 };
-
-include!("../../build/version.rs");
 
 // PAT constants
 const IA32_PAT: u32 = 0x277;
