@@ -56,6 +56,8 @@ stage1:
   mov si, msg_enter_stg1
   call print
 
+  jmp $
+
 print:
   mov ah, 0x0e
 
@@ -79,7 +81,7 @@ hang:
   jmp hang
 
 msg_stg1 db "[STAGE] Preparing for stage0 -> stage1...",0x0d,0x0a,0
-msg_enter_stg1 db "[STAGE] Entered stage1"
+msg_enter_stg1 db "[STAGE] Entered stage1",0x0d,0x0a,0
 msg_disk_err db "[ERROR] Cannot read stage1 data!",0x0d,0x0a,0
 msg_loaded_mbr db "Welcome to Proka Bootloader!",0x0d,0x0a,0
 
