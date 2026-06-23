@@ -1,7 +1,7 @@
 ; Proka Bootloader - The bootloader of Proka OS
 ; Copyright (C) RainSTR Studio 2026, All rights reserved.
 ;
-; This file is the MBR of the bootloader, which will jump
+; This file is the CD-ROM bootloader, which will jump
 ; to the loader_main to do more initializations.
 ; 
 ; Also, This part is the stage 0 -> stage 1 
@@ -42,14 +42,6 @@ boot:
   mov si, msg_loaded_mbr
   call print
 	
-  ; Prepare for Stage 2
-  ; Read the stage 2 code to 0x8000
-  mov ah, 0x42    ; BIOS extended LBA read function number
-  mov si, dap_pkt ; SI points to DAP packet structure
-  mov dl, [0x0500]; Load disk drive number saved at boot
-  int 0x13        ; Invoke BIOS disk interrupt
-  jc disk_read_error ; Jump if carry flag set (read failed)
-	
   ; Output a message
   mov si, msg_stg1
   call print
@@ -58,7 +50,11 @@ boot:
   jc disk_read_error
 
   ; Jump to 0x8000
-  jmp 0x0000:0x8000
+  jmp stage1
+
+stage1:
+  mov si, msg_enter_stg1
+  call print
 
 print:
   mov ah, 0x0e
@@ -83,19 +79,7 @@ hang:
   jmp hang
 
 msg_stg1 db "[STAGE] Preparing for stage0 -> stage1...",0x0d,0x0a,0
+msg_enter_stg1 db "[STAGE] Entered stage1"
 msg_disk_err db "[ERROR] Cannot read stage1 data!",0x0d,0x0a,0
 msg_loaded_mbr db "Welcome to Proka Bootloader!",0x0d,0x0a,0
 
-; DAP packet
-dap_pkt:
-  db  0x10        ; 0: size of DAP (16 bytes)
-  db  0           ; 1: reserved, must be 0
-  dw  16          ; 2: number of sectors to read
-  dw  0x8000      ; 4: buffer offset
-  dw  0           ; 6: buffer segment
-  dq  0x1         ; 8: 64-bit Target absolute LBA number (LBA1, offset 0x200)
-
-
-; Add MBR sign
-times 510 - ($ - $$) db 0
-dw 0xAA55
