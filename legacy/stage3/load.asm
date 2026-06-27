@@ -212,52 +212,16 @@ isoread:
   je .read_iso
 
 .first_read_iso:
-  ; --- Locate file on ISO9660 filesystem ---
-
-  ; Read PVD (LBA=16) to 0000:C000
-  xor eax, eax
-  mov es, ax
-  mov eax, 16
-  xor edx, edx
-  mov cx, 1
-  mov bx, 0xC000
-  call iso9660_read_lba
-  jc .iso_err
-
-  ; Validate signature "CD001"
-  push es
-  pop ds                   ; DS = 0
-  mov si, 0xC001
-  mov di, signature    ; defined in iso9660.asm (with prefix)
-  mov cx, 5
-  repe cmpsb
-  jnz .bad_sig
-
-  ; Validate PVD type (byte 0 == 1)
-  cmp byte [0xC000], 1
-  jne .inv_pvd
-
-  ; Parse root directory record
+  ; PVD already at 0xC000, Root directory at 0xC800 with ES=0
+  ; Get root directory length from PVD record
   mov eax, 0xC09C
-  call iso9660_read_record          ; EAX = root LBA, ECX = root length
+  call iso9660_read_record          ; ECX = root data length
   mov dword [iso_root_len], ecx
 
-  ; Read root directory sectors to 0000:C800
-  push eax                         ; save root LBA
-  xor ax, ax
-  mov es, ax
-  pop eax
-  mov bx, 0xC800
-  mov ecx, dword [iso_root_len]
-  add ecx, 2047
-  shr ecx, 11                      ; sectors = (length+2047)/2048
-  call iso9660_read_lba
-  jc .iso_err
-
-  ; Find file entry (DS already points to our data segment from real_mode_entry)
+  ; Search for file in root directory
   mov eax, 0xC800
   mov ecx, dword [iso_root_len]
-  mov si, [iso_file_name_ptr]      ; DS:SI points to ISO filename string
+  mov si, [iso_file_name_ptr]
   call iso9660_get_fileinfo
   jc .file_not_found_iso
   mov dword [current_cluster], eax ; file start LBA
@@ -283,16 +247,6 @@ isoread:
   mov byte [complete_read], 1
   jmp switch_prot_copy_file
 
-.bad_sig:
-  mov si, msg_bad_sig       ; from iso9660.asm (prefixed)
-  call print
-  jmp fallback_stg1
-
-.inv_pvd:
-  mov si, msg_inv_pvd       ; from iso9660.asm (prefixed)
-  call print
-  jmp fallback_stg1
-
 .file_not_found_iso:
   ; Disable VBE
   mov ax, 0x0012
@@ -305,7 +259,7 @@ isoread:
   jmp fallback_stg1
 
 .iso_err:
-  jmp fallback_stg1              ; no extra message
+  jmp fallback_stg1
 
 switch_prot_copy_file:
   ; Disable interrupts
@@ -328,7 +282,7 @@ switch_prot_copy_file:
 
 ; Include fat32 driver
 %include "../drivers/fat32.asm"
-; Include iso9660 driver (with variables prefixed with iso_)
+; Include iso9660 driver
 %include "../drivers/iso9660.asm"
 
 ; ======= Data section =======
