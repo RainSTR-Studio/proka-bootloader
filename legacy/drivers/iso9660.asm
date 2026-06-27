@@ -2,6 +2,7 @@
 ; Copyright (C) RainSTR Studio 2026, All rights reserved.
 ;
 ; This file is the ISO9660 reader.
+%define ISO9660_DEBUG 1
 
 ; ==============================
 ; load_iso9660_file
@@ -20,19 +21,91 @@ load_iso9660_file:
   mov [save_es], es
   mov [save_bx], bx
 
-  ; Since we saved the essential thing, we shall 
-  ; read the ISO9660's PVD to 0xc000.
-  ; So, we should fill an DAP and specify LBA 64 (an LBA size is 512)
-  ; Note: The ISO's LBA size is 2048, the specification says it's LBA 16,
-  ; but here we have to (x << 2).
-  mov eax, 64
-  mov cx, 4	; 2048 / 512 = 4
+  ; Read ISO9660 PVD to 0000:0c000
+  ; ISO logical block LBA=16 (2048B)
+  xor edx, edx        ; Clear LBA high 32bit
+  mov eax, 16
+  mov cx, 1
   push eax
   xor ax, ax
   mov es, ax
   pop eax
   mov bx, 0xc000
   call iso9660_read_lba
+  jc .err
+
+.validate:
+  ; Now the CD-ROM's PVD is at 0xc000.
+  ; Since then, we can read it and parse it.
+  ; But, we should verify it first!
+  ;
+  ; According to the specification, we shall
+  ; check is the first byte 0x1 and 1-5 is "CD001".
+  xor ax, ax
+  mov ds, ax
+  mov si, 0xc001
+  
+  ; Check is this CD001
+  mov di, signature
+  mov cx, 5
+  repe cmpsb   ; Continuiously cmp 5 bytes
+  jnz .bad_sig
+  
+  ; Check is this PVD
+  mov al, byte [0xc000]
+  cmp al, 1
+  jne .inv_pvd
+ 
+.parse_pvd:
+  ; After we validate PVD, we can read the record of 
+  ; the root directory.
+  mov eax, 0xc09c	; Root entry record
+  call iso9660_read_record
+  jmp $
+
+.inv_pvd:
+  mov si, msg_inv_pvd
+  call print
+  jmp .err
+
+.bad_sig:
+  mov si, msg_bad_sig
+  call print
+  jmp .err
+
+.err:
+  stc
+  ret
+
+; ==============================
+; iso9660_read_record
+; Read the directory record from specified address.
+; In: EAX = The record start address
+; Out: EAX = The LBA which is contained in record
+;      ECX = The length of this file
+;      SI = The record length
+; ==============================
+iso9660_read_record:
+  push bx
+  push es
+
+  ; set data segment
+  mov bx, ax
+  shr eax, 16
+  mov es, ax
+
+  ; SI = record length (offset 0, 1 byte)
+  movzx si, byte [es:bx]
+
+  ; load LBA (offset 2, 8 bytes, ISO dual-endian)
+  mov eax, [bx + 2]
+
+  ; load file length (offset 10, 8 bytes)
+  mov ecx, [bx + 10]
+
+  pop es
+  pop bx
+  ret
 
 ; ==============================
 ; iso9660_read_lba
@@ -46,18 +119,14 @@ iso9660_read_lba:
 
 .fill_dap:
   ; Fill the DAP sturcture
-  mov word [dap + 2], cx	; Sectors to read
-  mov word [dap + 4], bx	; Buffer offset
-  mov word [dap + 6], es	; Buffer segment
-  mov dword [dap + 8], eax	; LBA low 32-bit
-  mov dword [dap + 12], 0	; LBA high 32-bit (set to 0)
+  mov word [dap + 2], cx        ; Sectors to read
+  mov word [dap + 4], bx        ; Buffer offset
+  mov word [dap + 6], es        ; Buffer segment
+  mov dword [dap + 8], eax      ; LBA low 32-bit
+  mov dword [dap + 12], edx     ; LBA high 32-bit
 
 .read:
   ; Issue BIOS interrupt
-  push eax
-  xor ax, ax
-  mov fs, ax
-  pop eax
   mov si, dap
   mov ah, 0x42
   mov dl, [fs:0x0500]
@@ -78,12 +147,16 @@ iso9660_read_lba:
 save_es dw 0
 save_bx dw 0
 
+signature db "CD001"
+msg_bad_sig db "[ISO9660] [ERROR] Bad signature",0x0d,0x0a,0
+msg_inv_pvd db "[ISO9660] [ERROR] Invalid PVD!",0x0d,0x0a,0
+
 ; DAP structure
 dap:
-  db 0x10	; DAP size (fixed)
-  db 0		; Reserved
-  dw 0		; The sectors which you want to read
-  dw 0		; Buffer offset
-  dw 0		; Buffer segment
-  dd 0		; LBA sector (low)
-  dd 0		; LBA sector (high)
+  db 0x10        ; DAP size (fixed)
+  db 0                ; Reserved
+  dw 0                ; The sectors which you want to read
+  dw 0                ; Buffer offset
+  dw 0                ; Buffer segment
+  dd 0                ; LBA sector (low)
+  dd 0                ; LBA sector (high)
