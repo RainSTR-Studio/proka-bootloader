@@ -23,8 +23,10 @@ loadinit:
   xor ecx, ecx
   mov byte [is_first_read + 0x20000], 1
   mov byte [complete_read + 0x20000], 0
+  mov byte [load_type + 0x20000], 1
   mov dword [dest_current + 0x20000], 0x3200000
   mov word [file_name_ptr + 0x20000], initprt_filename
+  mov word [iso_file_name_ptr + 0x20000], initprt_filename_iso
   mov word [error_msg_ptr + 0x20000], msg_initprt_not_found
   call switch_real_load_file
   ret
@@ -34,8 +36,10 @@ loadkrnl:
   xor ecx, ecx
   mov byte [is_first_read + 0x20000], 1
   mov byte [complete_read + 0x20000], 0
+  mov byte [load_type + 0x20000], 2
   mov dword [dest_current + 0x20000], 0x200000
   mov word [file_name_ptr + 0x20000], kernel_filename
+  mov word [iso_file_name_ptr + 0x20000], kernel_filename_iso
   mov word [error_msg_ptr + 0x20000], msg_kernel_not_found
   call switch_real_load_file
   ret
@@ -67,8 +71,7 @@ back_protected_mode:
   ; address!
   mov edi, [dest_current + 0x20000]  ; Destination
   mov esi, 0x78000  ; Source
-  movzx ecx, byte [fat32_spc + 0x20000]
-  shl ecx, 9  ; SPC x 512 = 1 cluster bytes
+  mov ecx, [copy_size + 0x20000]     ; Block size (FAT cluster or ISO sector)
 
   ; Copy!
   cld 
@@ -127,6 +130,11 @@ real_mode_entry:
   mov dl, [0x0500]
   int 0x13
 
+  ; Check disk type: CD/DVD if >= 0xE0
+  cmp dl, 0xE0
+  jae isoread
+
+fatread:
   cmp byte [is_first_read], 0 
   je .read
 
@@ -150,6 +158,11 @@ real_mode_entry:
   mov [fat32_spc], cl 
   pop cx
   pop fs
+
+  ; Calculate copy size = SPC * 512
+  movzx eax, byte [fat32_spc]
+  shl eax, 9
+  mov dword [copy_size], eax
 
   ; Set is_first_read to false (0)
   mov byte [is_first_read], 0
@@ -194,6 +207,106 @@ real_mode_entry:
   mov byte [complete_read], 1 
   jmp switch_prot_copy_file
 
+isoread:
+  cmp byte [is_first_read], 0
+  je .read_iso
+
+.first_read_iso:
+  ; --- Locate file on ISO9660 filesystem ---
+
+  ; Read PVD (LBA=16) to 0000:C000
+  xor eax, eax
+  mov es, ax
+  mov eax, 16
+  xor edx, edx
+  mov cx, 1
+  mov bx, 0xC000
+  call iso9660_read_lba
+  jc .iso_err
+
+  ; Validate signature "CD001"
+  push es
+  pop ds                   ; DS = 0
+  mov si, 0xC001
+  mov di, signature    ; defined in iso9660.asm (with prefix)
+  mov cx, 5
+  repe cmpsb
+  jnz .bad_sig
+
+  ; Validate PVD type (byte 0 == 1)
+  cmp byte [0xC000], 1
+  jne .inv_pvd
+
+  ; Parse root directory record
+  mov eax, 0xC09C
+  call iso9660_read_record          ; EAX = root LBA, ECX = root length
+  mov dword [iso_root_len], ecx
+
+  ; Read root directory sectors to 0000:C800
+  push eax                         ; save root LBA
+  xor ax, ax
+  mov es, ax
+  pop eax
+  mov bx, 0xC800
+  mov ecx, dword [iso_root_len]
+  add ecx, 2047
+  shr ecx, 11                      ; sectors = (length+2047)/2048
+  call iso9660_read_lba
+  jc .iso_err
+
+  ; Find file entry (DS already points to our data segment from real_mode_entry)
+  mov eax, 0xC800
+  mov ecx, dword [iso_root_len]
+  mov si, [iso_file_name_ptr]      ; DS:SI points to ISO filename string
+  call iso9660_get_fileinfo
+  jc .file_not_found_iso
+  mov dword [current_cluster], eax ; file start LBA
+  mov dword [iso_file_size], ecx   ; file size in bytes
+  mov byte [is_first_read], 0
+  mov dword [copy_size], 2048      ; one ISO sector
+
+.read_iso:
+  mov eax, dword [current_cluster]
+  mov cx, 1
+  mov bx, 0x7800
+  mov es, bx
+  xor bx, bx
+  call iso9660_read_lba
+  jc .iso_err
+
+  inc dword [current_cluster]
+  sub dword [iso_file_size], 2048
+  jbe .done_iso
+  jmp switch_prot_copy_file
+
+.done_iso:
+  mov byte [complete_read], 1
+  jmp switch_prot_copy_file
+
+.bad_sig:
+  mov si, msg_bad_sig       ; from iso9660.asm (prefixed)
+  call print
+  jmp fallback_stg1
+
+.inv_pvd:
+  mov si, msg_inv_pvd       ; from iso9660.asm (prefixed)
+  call print
+  jmp fallback_stg1
+
+.file_not_found_iso:
+  ; Disable VBE
+  mov ax, 0x0012
+  int 0x10 
+  ; Text mode
+  mov ax, 0x0003
+  int 0x10
+  mov si, [error_msg_ptr]
+  call print
+  jmp fallback_stg1
+
+.iso_err:
+  jmp fallback_stg1              ; no extra message
+
 switch_prot_copy_file:
   ; Disable interrupts
   cli
@@ -215,6 +328,8 @@ switch_prot_copy_file:
 
 ; Include fat32 driver
 %include "../drivers/fat32.asm"
+; Include iso9660 driver (with variables prefixed with iso_)
+%include "../drivers/iso9660.asm"
 
 ; ======= Data section =======
 section .data16
@@ -226,13 +341,22 @@ fat32_spc db 0
 dest_current dd 0
 file_name_ptr dw 0
 error_msg_ptr dw 0
+iso_file_name_ptr dw 0
+iso_file_size dd 0
+copy_size dd 0
+load_type db 0
+iso_root_len dd 0
 
-; Initprt filename (8.3)
+; Initprt filename (FAT 8.3)
 initprt_filename db 'INITPRT IMG'
+; Initprt filename (ISO)
+initprt_filename_iso db 'INITPRT.IMG;1'
 msg_initprt_not_found db "[ERROR] Initprt not found",0x0d,0x0a,0
 
-; Kernel filename (8.3)
+; Kernel filename (FAT 8.3)
 kernel_filename db 'PROKA-~1   '
+; Kernel filename (ISO)
+kernel_filename_iso db 'PROKA-KERNEL;1'
 msg_kernel_not_found db "[ERROR] Kernel not found",0x0d,0x0a,0
 
 ; Real mode IDT (IVT)

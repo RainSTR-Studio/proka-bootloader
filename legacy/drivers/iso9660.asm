@@ -18,10 +18,10 @@ load_iso9660_file:
   cld
 
   ; Save ES, BX
-  mov [save_es], es
-  mov [save_bx], bx
-  mov [save_si], si
-  mov [save_ds], ds
+  mov [iso_save_es], es
+  mov [iso_save_bx], bx
+  mov [iso_save_si], si
+  mov [iso_save_ds], ds
 
   ; Read ISO9660 PVD to 0000:0c000
   ; ISO logical block LBA=16 (2048B)
@@ -78,8 +78,8 @@ load_iso9660_file:
 
   ; Just loaded the root dir's record, the next one is to
   ; parse it
-  mov si, word [save_si]
-  mov ds, [save_ds]
+  mov si, word [iso_save_si]
+  mov ds, [iso_save_ds]
   mov eax, 0xc800
   mov ecx, [root_dir_len]
   call iso9660_get_fileinfo
@@ -89,8 +89,8 @@ load_iso9660_file:
   mov edx, 0
   add ecx, 2047
   shr ecx, 11
-  mov es, [save_es]
-  mov bx, [save_bx]
+  mov es, [iso_save_es]
+  mov bx, [iso_save_bx]
   call iso9660_read_lba
   jc .err
   pop es
@@ -194,7 +194,7 @@ iso9660_get_fileinfo:
   jae .not_found
   jmp .read
 
-.info
+.info:
   ; If we are here, seems we have matched.
   call iso9660_read_record
   pop es
@@ -215,17 +215,17 @@ iso9660_get_fileinfo:
 ; ==============================
 iso9660_read_lba:
   pushad
-.fill_dap:
+.fill_iso_dap:
   ; Fill the DAP sturcture
-  mov word [dap + 2], cx        ; Sectors to read
-  mov word [dap + 4], bx        ; Buffer offset
-  mov word [dap + 6], es        ; Buffer segment
-  mov dword [dap + 8], eax      ; LBA low 32-bit
-  mov dword [dap + 12], edx     ; LBA high 32-bit
+  mov word [iso_dap + 2], cx        ; Sectors to read
+  mov word [iso_dap + 4], bx        ; Buffer offset
+  mov word [iso_dap + 6], es        ; Buffer segment
+  mov dword [iso_dap + 8], eax      ; LBA low 32-bit
+  mov dword [iso_dap + 12], edx     ; LBA high 32-bit
 
 .read:
   ; Issue BIOS interrupt
-  mov si, dap
+  mov si, iso_dap
   mov ah, 0x42
   mov dl, [0x0500]
   int 0x13
@@ -240,10 +240,10 @@ iso9660_read_lba:
 ; =======================================
 ; DATA SECTIONS
 ; =======================================
-save_es dw 0
-save_bx dw 0
-save_si dw 0
-save_ds dw 0
+iso_save_es dw 0
+iso_save_bx dw 0
+iso_save_si dw 0
+iso_save_ds dw 0
 root_dir_len dd 0
 length dd 0
 nameptr dw 0
@@ -254,7 +254,7 @@ msg_bad_sig db "[ISO9660] [ERROR] Bad signature",0x0d,0x0a,0
 msg_inv_pvd db "[ISO9660] [ERROR] Invalid PVD!",0x0d,0x0a,0
 
 ; DAP structure
-dap:
+iso_dap:
   db 0x10        ; DAP size (fixed)
   db 0           ; Reserved
   dw 0           ; The sectors which you want to read

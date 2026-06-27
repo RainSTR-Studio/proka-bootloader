@@ -66,7 +66,14 @@ stage1:
   call load_iso9660_file
   jc err_read_iso
 
-  jmp $
+  ; Emit succeed
+  mov si, msg_isoread_ok
+  call print
+
+  ; Prepare for stage2!
+  mov si, msg_stg2
+  call print
+  jmp 0x2000:0x0000	; Jump!
 
 print:
   mov ah, 0x0e
@@ -99,6 +106,8 @@ hang:
 msg_stg1 db "[STAGE] Preparing for stage0 -> stage1...",0x0d,0x0a,0
 msg_enter_stg1 db "[STAGE] Entered stage1",0x0d,0x0a,0
 msg_emit_cdrom db "[INFO] This is CD-ROM boot mode, will use ISO9660 reader...",0x0d, 0x0a, 0
+msg_isoread_ok db "[INFO] Successfully read ISO",0x0d,0x0a,0
+msg_stg2 db "[STAGE] Preparing for stage1 -> stage2...",0x0d,0x0a,0
 msg_disk_err db "[ERROR] Cannot read stage1 data!",0x0d,0x0a,0
 msg_loaded_mbr db "Welcome to Proka Bootloader!",0x0d,0x0a,0
 msg_err_iso db "[ERROR] Could not read ISO",0x0d,0x0a,0
