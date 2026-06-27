@@ -62,8 +62,9 @@ stage1:
   mov si, filename
   mov ax, 0x2000
   mov es, ax
-  mov bx, 0 
+  mov bx, 0
   call load_iso9660_file
+  jc err_read_iso
 
   jmp $
 
@@ -85,6 +86,11 @@ disk_read_error:
   call print
   jmp hang
 
+err_read_iso:
+  mov si, msg_err_iso
+  call print
+  jmp hang
+
 hang:
   hlt
   jmp hang
@@ -95,6 +101,7 @@ msg_enter_stg1 db "[STAGE] Entered stage1",0x0d,0x0a,0
 msg_emit_cdrom db "[INFO] This is CD-ROM boot mode, will use ISO9660 reader...",0x0d, 0x0a, 0
 msg_disk_err db "[ERROR] Cannot read stage1 data!",0x0d,0x0a,0
 msg_loaded_mbr db "Welcome to Proka Bootloader!",0x0d,0x0a,0
-filename db "PROKA-KERNEL",0
+msg_err_iso db "[ERROR] Could not read ISO",0x0d,0x0a,0
+filename db "PKLDR;1"
 
 %include "../drivers/iso9660.asm"
