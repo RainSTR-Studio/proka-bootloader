@@ -2,7 +2,7 @@
 ; Copyright (C) RainSTR Studio 2026, All rights reserved.
 ;
 ; This file is the ISO9660 reader.
-%define ISO9660_DEBUG 1
+[bits 16]
 
 ; ==============================
 ; load_iso9660_file
@@ -84,6 +84,7 @@ load_iso9660_file:
   mov ecx, [root_dir_len]
   call iso9660_get_fileinfo
   jc .err
+
   ; Load the file content into ES:BX
   mov edx, 0
   add ecx, 2047
@@ -95,6 +96,7 @@ load_iso9660_file:
   pop es
   popad
   clc
+  ret
 
 .inv_pvd:
   mov si, msg_inv_pvd
@@ -152,11 +154,17 @@ iso9660_read_record:
 ; ==============================
 iso9660_get_fileinfo:
   clc
+  push es
+  push eax
+  xor ax, ax
+  mov es, ax
+  pop eax
   mov [length], ecx
   mov [nameptr], si
   mov edx, eax
   add edx, ecx
   mov [dir_end], edx
+
 .read:
   ; So, in this fn, we need to compare the filename
   ; The filename is at offset 0x22, so the record which
@@ -164,29 +172,37 @@ iso9660_get_fileinfo:
   movzx esi, byte [eax]
   cmp esi, 0x22
   jb .update
+  mov [rec_len], esi
 
   ; If not lower, we shall compare it...
-  push esi
-  movzx cx, byte [eax + 0x20]
+  movzx ecx, byte [eax + 0x20]
   movzx esi, word [nameptr]
   mov edi, eax
-  add edi, 0x22
+  add edi, 0x21
   repe cmpsb
-  pop esi
-  jnz .update
-
-  ; If we are here, seems we have matched.
-  call iso9660_read_record
-  ret
+  jz .info
 
 .update:
-  ; Check: Is over than ECX's specified length
+  ; Check: Is ESI zero
+  mov esi, [rec_len]
+  test esi, esi
+  jz .not_found
   add eax, esi
+
+  ; Check: Is over than ECX's specified length
   cmp eax, [dir_end]
   jae .not_found
   jmp .read
 
+.info
+  ; If we are here, seems we have matched.
+  call iso9660_read_record
+  pop es
+  clc
+  ret
+
 .not_found:
+  pop es
   stc
   ret
 
@@ -206,6 +222,7 @@ iso9660_read_lba:
   mov word [dap + 6], es        ; Buffer segment
   mov dword [dap + 8], eax      ; LBA low 32-bit
   mov dword [dap + 12], edx     ; LBA high 32-bit
+
 .read:
   ; Issue BIOS interrupt
   mov si, dap
@@ -231,6 +248,7 @@ root_dir_len dd 0
 length dd 0
 nameptr dw 0
 dir_end dd 0
+rec_len dd 0
 signature db "CD001"
 msg_bad_sig db "[ISO9660] [ERROR] Bad signature",0x0d,0x0a,0
 msg_inv_pvd db "[ISO9660] [ERROR] Invalid PVD!",0x0d,0x0a,0
