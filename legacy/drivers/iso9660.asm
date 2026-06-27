@@ -169,13 +169,13 @@ iso9660_get_fileinfo:
   ; So, in this fn, we need to compare the filename
   ; The filename is at offset 0x22, so the record which
   ; is lower than 0x22 is being passed.
-  movzx esi, byte [eax]
+  movzx esi, byte [es:eax]
   cmp esi, 0x22
   jb .update
   mov [rec_len], esi
 
   ; If not lower, we shall compare it...
-  movzx ecx, byte [eax + 0x20]
+  movzx ecx, byte [es:eax + 0x20]
   movzx esi, word [nameptr]
   mov edi, eax
   add edi, 0x21
@@ -215,6 +215,7 @@ iso9660_get_fileinfo:
 ; ==============================
 iso9660_read_lba:
   pushad
+
 .fill_iso_dap:
   ; Fill the DAP sturcture
   mov word [iso_dap + 2], cx        ; Sectors to read
@@ -226,12 +227,16 @@ iso9660_read_lba:
 .read:
   ; Issue BIOS interrupt
   mov si, iso_dap
+  xor ax, ax
+  mov fs, ax
   mov ah, 0x42
-  mov dl, [0x0500]
+  mov dl, [fs:0x0500]
   int 0x13
   jc .disk_err
   popad
+  clc
   ret
+
 .disk_err:
   popad
   stc

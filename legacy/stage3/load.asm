@@ -127,7 +127,7 @@ real_mode_entry:
 
   ; Reset disk service
   mov ah, 0x00
-  mov dl, [0x0500]
+  mov dl, [fs:0x0500]
   int 0x13
 
   ; Check disk type: CD/DVD if >= 0xE0
@@ -235,6 +235,7 @@ isoread:
   mov bx, 0x7800
   mov es, bx
   xor bx, bx
+  xor edx, edx
   call iso9660_read_lba
   jc .iso_err
 
@@ -259,6 +260,10 @@ isoread:
   jmp fallback_stg1
 
 .iso_err:
+  mov ax, 0x0012
+  int 0x10
+  mov ax, 0x0003
+  int 0x10
   jmp fallback_stg1
 
 switch_prot_copy_file:
