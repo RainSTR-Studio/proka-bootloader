@@ -1,9 +1,11 @@
 ; Proka Bootloader - The bootloader of Proka OS 
 ; Copyright (C) RainSTR Studio 2026, All rights reserved.
 ; 
-; This file is the initprt loader of stage3, which will
-; use real/mode to read 1 cluster initprt and load it
-; to 0x100000 (phys).
+; This file is the file loader of stage3, which will
+; use real mode to read a file (initprt or kernel) and
+; load it to memory. Two entry points:
+;   loadinit - loads INITPRT.IMG to 0x3200000
+;   loadkrnl - loads PROKA-~1 to 0x200000
 
 %define BPB_CACHE_OFF 0xA000
 %define BPB_CACHE_SEG 0x0000
@@ -19,6 +21,22 @@ extern fallback_stg1
 global loadinit
 loadinit:
   xor ecx, ecx
+  mov byte [is_first_read + 0x20000], 1
+  mov byte [complete_read + 0x20000], 0
+  mov dword [dest_current + 0x20000], 0x3200000
+  mov word [file_name_ptr + 0x20000], initprt_filename
+  mov word [error_msg_ptr + 0x20000], msg_initprt_not_found
+  call switch_real_load_file
+  ret
+
+global loadkrnl
+loadkrnl:
+  xor ecx, ecx
+  mov byte [is_first_read + 0x20000], 1
+  mov byte [complete_read + 0x20000], 0
+  mov dword [dest_current + 0x20000], 0x200000
+  mov word [file_name_ptr + 0x20000], kernel_filename
+  mov word [error_msg_ptr + 0x20000], msg_kernel_not_found
   call switch_real_load_file
   ret
   
@@ -47,7 +65,7 @@ back_protected_mode:
   ;
   ; Just copy the content from buffer to destination
   ; address!
-  mov edi, [dest_current + 0x20000]  ; Destination (0x200000)
+  mov edi, [dest_current + 0x20000]  ; Destination
   mov esi, 0x78000  ; Source
   movzx ecx, byte [fat32_spc + 0x20000]
   shl ecx, 9  ; SPC x 512 = 1 cluster bytes
@@ -102,7 +120,7 @@ real_mode_entry:
   lgdt [empty_gdt_ptr]
 
   ; Now Real mode is fully normal working!
-  ; Then, just use this driver to read initprt!
+  ; Then, just use this driver to read file!
 
   ; Reset disk service
   mov ah, 0x00
@@ -114,7 +132,7 @@ real_mode_entry:
 
 .first_read:
   ; Get file start cluster
-  mov si, initprt_filename
+  mov si, [file_name_ptr]
   call fat32_get_start_cluster
   jc .file_not_found
   mov dword [current_cluster], eax
@@ -166,7 +184,7 @@ real_mode_entry:
   mov ax, 0x0003
   int 0x10
 
-  mov si, msg_initprt_not_found
+  mov si, [error_msg_ptr]
   call print
 
   jmp fallback_stg1
@@ -205,11 +223,17 @@ is_first_read db 1
 current_cluster dd 0
 complete_read db 0
 fat32_spc db 0
-dest_current dd 0x3200000
+dest_current dd 0
+file_name_ptr dw 0
+error_msg_ptr dw 0
 
 ; Initprt filename (8.3)
 initprt_filename db 'INITPRT IMG'
 msg_initprt_not_found db "[ERROR] Initprt not found",0x0d,0x0a,0
+
+; Kernel filename (8.3)
+kernel_filename db 'PROKA-~1   '
+msg_kernel_not_found db "[ERROR] Kernel not found",0x0d,0x0a,0
 
 ; Real mode IDT (IVT)
 real_mode_idt:
