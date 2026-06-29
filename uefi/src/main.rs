@@ -6,19 +6,18 @@
 #![reexport_test_harness_main = "test_main"]
 
 mod version;
+use core::fmt::Display;
+
+use gpt_disk_io::{BlockIo, gpt_disk_types::BlockSize};
+use iso9660::{find_file, mount, read_file};
 use version::VERSION;
 use proka_bootloader::header::Header;
 use proka_bootloader::output::Framebuffer;
 use uefi::{
-    mem::memory_map::MemoryMapOwned,
-    prelude::*,
-    println,
-    proto::{
+    boot::{get_handle_for_protocol, open_protocol_exclusive}, mem::memory_map::MemoryMapOwned, prelude::*, println, proto::{
         console::gop::{GraphicsOutput, PixelFormat},
-        media::file::{File, FileAttribute, FileInfo, FileMode},
-    },
-    system::with_config_table,
-    table::cfg::ConfigTableEntry,
+        media::{block::BlockIO, file::{File, FileAttribute, FileInfo, FileMode}},
+    }, system::with_config_table, table::cfg::ConfigTableEntry
 };
 
 // PAT constants
@@ -29,6 +28,78 @@ const PAT_WT: u64 = 0x04;
 const PAT_WP: u64 = 0x05;
 const PAT_WB: u64 = 0x06;
 const PAT_UC_MINUS: u64 = 0x07;
+
+/// A struct which implemented [`BlockIo`] trait.
+struct Reader {
+    blksize: u32,
+    lastblk: u64,
+}
+
+impl Reader {
+    /// Initialize this reader
+    pub fn new() -> Self {
+        // Get protocol
+        let handle = get_handle_for_protocol::<BlockIO>().unwrap();
+        let block = open_protocol_exclusive::<BlockIO>(handle).unwrap();
+        
+        // Get and fill info
+        let blksize = block.media().block_size();
+        let lastblk = block.media().last_block();
+        Self { blksize, lastblk }
+    }
+}
+
+impl BlockIo for Reader {
+    type Error = Error;
+
+    fn block_size(&self) -> gpt_disk_io::gpt_disk_types::BlockSize {
+        BlockSize::new(self.blksize).unwrap()
+    }
+
+    fn num_blocks(&mut self) -> Result<u64, Self::Error> {
+        Ok(self.lastblk)
+    }
+
+    fn read_blocks(
+        &mut self,
+        start_lba: gpt_disk_io::gpt_disk_types::Lba,
+        dst: &mut [u8],
+    ) -> Result<(), Self::Error>
+    {
+        // Get protocol
+        let handle = get_handle_for_protocol::<BlockIO>().unwrap();
+        let block = open_protocol_exclusive::<BlockIO>(handle).unwrap();
+        let id = block.media().media_id();
+
+        // Read blocks
+        block.read_blocks(id, start_lba.to_u64(), dst).unwrap();
+        Ok(())
+    }
+    
+    fn write_blocks(
+        &mut self,
+        _start_lba: gpt_disk_io::gpt_disk_types::Lba,
+        _src: &[u8],
+    ) -> Result<(), Self::Error>
+    {
+        // Refuse to write here...
+        Err(Error)
+    }
+
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+/// An empty error type.
+#[derive(Debug)]
+struct Error;
+
+impl Display for Error {
+    fn fmt(&self, _f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        Ok(())
+    }
+}
 
 #[entry]
 fn main() -> Status {
@@ -56,40 +127,8 @@ fn main() -> Status {
     // Get current image handle
     let handle = boot::image_handle();
 
-    // Read the kernel from FAT32 partition, and put it to 0x200000
-    let kernel_path = cstr16!("\\proka-kernel");
-    let mut fs = boot::get_image_file_system(handle).unwrap();
-    let mut root = fs.open_volume().unwrap();
-    let mut kernel = root
-        .open(kernel_path, FileMode::Read, FileAttribute::empty())
-        .expect("Kernel not found");
-
-    // And get the kernel size
-    let infobuf: &mut [u8; 1024] = &mut [0; 1024]; // 1024 bytes for file info
-    let info = kernel.get_info::<FileInfo>(infobuf).unwrap();
-    let size = info.file_size() as usize;
-
-    // Copy to the target address
-    let mut buf = unsafe {
-        core::slice::from_raw_parts_mut(0x200000 as *mut u8, size) // 64MB for kernel
-    };
-    kernel.into_regular_file().unwrap().read(&mut buf).unwrap();
-    println!("[INFO] Successfully loaded kernel into 0x200000 (phys) / 0xffff800000000000 (virt).");
-
-    // Read the initprt from FAT32 partition, and put it to 0x2200000
-    let initprt_path = cstr16!("\\initprt.img");
-    let mut initprt = root
-        .open(initprt_path, FileMode::Read, FileAttribute::empty())
-        .expect("Initprt not found");
-    // And get the initprt size
-    let infobuf: &mut [u8; 1024] = &mut [0; 1024]; // 1024 bytes for file info
-    let info = initprt.get_info::<FileInfo>(infobuf).unwrap();
-    let size = info.file_size() as usize; // Copy to the target address
-    let mut buf = unsafe { core::slice::from_raw_parts_mut(0x3200000 as *mut u8, size) };
-    initprt.into_regular_file().unwrap().read(&mut buf).unwrap();
-    println!(
-        "[INFO] Successfully loaded initprt into 0x3200000 (phys) / 0xffff800002000000 (virt)."
-    );
+    // Read file
+    reader(handle);
 
     // Verificate kernel
     let hdr = unsafe { &*(0x200000 as *const Header) };
@@ -181,6 +220,69 @@ fn main() -> Status {
 
     // Jump to stage1
     pkbl_uefi::stage1_entry();
+}
+
+fn reader(handle: Handle) {
+    // Read the file by using raw method
+    let read_raw = || {
+        // Init
+        let mut reader = Reader::new();
+        let root = mount(&mut reader, 0).unwrap();
+
+        // Find file
+        let kernel = find_file(&mut reader, &root, "/proka-kernel").expect("Kernel not found");
+        let initprt = find_file(&mut reader, &root, "/initprt.img").expect("Initprt not found");
+        
+        // Define buffer
+        let kernel_buf = unsafe { core::slice::from_raw_parts_mut(0x200000 as *mut u8, kernel.size as usize) };
+        let initprt_buf = unsafe { core::slice::from_raw_parts_mut(0x3200000 as *mut u8,initprt.size as usize) };
+
+        // Read each file
+        read_file(&mut reader, &kernel, kernel_buf).expect("Failed to read kernel");
+        read_file(&mut reader, &initprt, initprt_buf).expect("Failed to read initprt")
+    };
+
+    // Read the kernel from FAT32 partition, and put it to 0x200000
+    let kernel_path = cstr16!("\\proka-kernel");
+    let initprt_path = cstr16!("\\initprt.img");
+    let mut fs = boot::get_image_file_system(handle).unwrap();
+    let mut root = fs.open_volume().unwrap();
+    let kernel = root.open(kernel_path, FileMode::Read, FileAttribute::empty());
+    let initprt = root.open(initprt_path, FileMode::Read, FileAttribute::empty());
+
+    // Check: Is all exists...
+    if kernel.is_err() || initprt.is_err() {
+        drop(fs);
+        read_raw();
+        return;
+    }
+
+    // Re-init the kernel and initprt 
+    let mut kernel = kernel.unwrap();
+    let mut initprt = initprt.unwrap();
+
+    // And get the kernel size
+    let infobuf: &mut [u8; 1024] = &mut [0; 1024]; // 1024 bytes for file info
+    let info = kernel.get_info::<FileInfo>(infobuf).unwrap();
+    let size = info.file_size() as usize;
+
+    // Copy to the target address
+    let mut buf = unsafe {
+        core::slice::from_raw_parts_mut(0x200000 as *mut u8, size) // 64MB for kernel
+    };
+    kernel.into_regular_file().unwrap().read(&mut buf).unwrap();
+    println!("[INFO] Successfully loaded kernel into 0x200000 (phys) / 0xffff800000000000 (virt).");
+
+    // Read the initprt from FAT32 partition, and put it to 0x2200000
+    // And get the initprt size
+    let infobuf: &mut [u8; 1024] = &mut [0; 1024]; // 1024 bytes for file info
+    let info = initprt.get_info::<FileInfo>(infobuf).unwrap();
+    let size = info.file_size() as usize; // Copy to the target address
+    let mut buf = unsafe { core::slice::from_raw_parts_mut(0x3200000 as *mut u8, size) };
+    initprt.into_regular_file().unwrap().read(&mut buf).unwrap();
+    println!(
+        "[INFO] Successfully loaded initprt into 0x3200000 (phys) / 0xffff800002000000 (virt)."
+    );
 }
 
 #[cfg(test)]
