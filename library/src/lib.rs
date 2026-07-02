@@ -17,23 +17,23 @@
 //!
 //! ## Example
 //! Here's an example to use this crate:
-//! 
+//!
 //! ```rust
 //! #![no_std]
 //! #![no_main]
 //! #![feature(custom_test_frameworks)]
 //! #![test_runner(self::test_runner)]
 //! #![reexport_test_harness_main = "test_main"]
-//! 
+//!
 //! use proka_bootloader::BootInfo;
 //! use core::panic::PanicInfo;
-//! 
+//!
 //! // Panic handler
 //! #[panic_handler]
 //! pub fn panic(_: &PanicInfo) -> ! {
 //!     loop {}
 //! }
-//! 
+//!
 //! #[unsafe(no_mangle)]
 //! #[unsafe(link_section = ".text")]
 //! pub extern "C" fn kernel_main() -> ! {
@@ -50,7 +50,7 @@
 //!     }
 //!     loop {}
 //! }
-//! 
+//!
 //! // Test runner
 //! #[cfg(test)]
 //! fn test_runner(tests: &[&'static dyn Fn()]) {
@@ -73,6 +73,7 @@
 #![feature(custom_test_frameworks)]
 #![test_runner(self::test_runner)]
 #![reexport_test_harness_main = "test_main"]
+#![allow(unused)]   // Annoying in vscode, i have to do this...
 
 pub mod header;
 #[cfg(feature = "loader_main")]
@@ -160,7 +161,7 @@ pub enum BootMode {
 /// 3. No mutable aliasing exists for this memory region.
 ///
 /// # Note
-/// Once the kernel do remapping, i suggest that map that region as `PRESENT`, 
+/// Once the kernel do remapping, i suggest that map that region as `PRESENT`,
 /// no `WRITABLE`.
 ///
 /// # Returns

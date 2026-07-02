@@ -14,6 +14,19 @@ pub struct MemoryMap {
     pub entries: [MemoryEntry; 128],
 }
 
+impl Default for MemoryMap {
+    fn default() -> Self {
+        MemoryMap {
+            count: 0,
+            entries: [MemoryEntry {
+                base_addr: 0,
+                length: 0,
+                mem_type: MemoryType::Reserved,
+            }; 128],
+        }
+    }
+}
+
 /// The memory entry.
 #[repr(C, packed)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

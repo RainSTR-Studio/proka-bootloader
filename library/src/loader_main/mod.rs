@@ -3,7 +3,6 @@
 //!
 //! So if you are using this crate by kernel, do not
 //! enable this feature and trying importing this module.
-
 mod gdt;
 #[cfg(target_os = "none")]
 mod memory;
@@ -52,6 +51,7 @@ static mut GDT_PTR: GdtPtr = GdtPtr {
 /// the boot mode, only Legacy and Uefi are legal
 pub fn loader_main(bootmode: BootMode) -> ! {
     // Get the essential information for kernel
+    #[cfg(any(target_os = "uefi", target_os = "none"))]
     {
         let framebuffer = get_framebuffer();
         let memory_map = get_memory_map();

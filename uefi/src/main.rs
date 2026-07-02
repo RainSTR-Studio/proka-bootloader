@@ -5,11 +5,10 @@
 #![test_runner(self::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+extern crate alloc;
+use alloc::{borrow::Cow::Borrowed, vec};
 mod version;
-use core::fmt::Display;
-
-use gpt_disk_io::{BlockIo, gpt_disk_types::BlockSize};
-use iso9660::{find_file, mount, read_file};
+use hadris_iso::{IsoImage, Read, Seek};
 use version::VERSION;
 use proka_bootloader::header::Header;
 use proka_bootloader::output::Framebuffer;
@@ -31,73 +30,81 @@ const PAT_UC_MINUS: u64 = 0x07;
 
 /// A struct which implemented [`BlockIo`] trait.
 struct Reader {
+    pos: u64,
     blksize: u32,
     lastblk: u64,
 }
 
 impl Reader {
-    /// Initialize this reader
-    pub fn new() -> Self {
-        // Get protocol
-        let handle = get_handle_for_protocol::<BlockIO>().unwrap();
-        let block = open_protocol_exclusive::<BlockIO>(handle).unwrap();
-        
-        // Get and fill info
-        let blksize = block.media().block_size();
-        let lastblk = block.media().last_block();
-        Self { blksize, lastblk }
+    // Create a new Reader instance.
+    fn new() -> Self {
+        let block_io = get_handle_for_protocol::<BlockIO>().unwrap();
+        let block_io = open_protocol_exclusive::<BlockIO>(block_io).expect("Failed to open BlockIO protocol");
+        Self {
+            pos: 0,
+            blksize: block_io.media().block_size(),
+            lastblk: block_io.media().last_block(),
+        }
     }
 }
 
-impl BlockIo for Reader {
-    type Error = Error;
+impl Read for Reader {
+    fn read(&mut self, buf: &mut [u8]) -> hadris_iso::IoResult<usize> {
+        // Get block IO
+        let mut total_read = 0;
+        let mut buf_offset = 0;
 
-    fn block_size(&self) -> gpt_disk_io::gpt_disk_types::BlockSize {
-        BlockSize::new(self.blksize).unwrap()
-    }
+        while total_read < buf.len() {
+            let block_num = self.pos / self.blksize as u64;
+            if block_num > self.lastblk {
+                break; // No more blocks to read
+            }
 
-    fn num_blocks(&mut self) -> Result<u64, Self::Error> {
-        Ok(self.lastblk)
-    }
+            let block_lba = self.pos / self.blksize as u64;
+            let block_offset = (self.pos % self.blksize as u64) as usize;
+            let bytes_to_read = core::cmp::min(self.blksize as usize - block_offset, buf.len() - total_read);
 
-    fn read_blocks(
-        &mut self,
-        start_lba: gpt_disk_io::gpt_disk_types::Lba,
-        dst: &mut [u8],
-    ) -> Result<(), Self::Error>
-    {
-        // Get protocol
-        let handle = get_handle_for_protocol::<BlockIO>().unwrap();
-        let block = open_protocol_exclusive::<BlockIO>(handle).unwrap();
-        let id = block.media().media_id();
+            // Read the block into a temporary buffer
+            let mut temp_buf = vec![0u8; self.blksize as usize];
+            let read_result: Result<(), hadris_iso::Error> = {
+                let block_io = get_handle_for_protocol::<BlockIO>().unwrap();
+                let block_io = open_protocol_exclusive::<BlockIO>(block_io).unwrap();
+                block_io.read_blocks(block_io.media().media_id(), block_lba, &mut temp_buf).map_err(|_| hadris_iso::Error::from(hadris_iso::ErrorKind::Other))?;
+                Ok(())
+            };
 
-        // Read blocks
-        block.read_blocks(id, start_lba.to_u64(), dst).unwrap();
-        Ok(())
-    }
-    
-    fn write_blocks(
-        &mut self,
-        _start_lba: gpt_disk_io::gpt_disk_types::Lba,
-        _src: &[u8],
-    ) -> Result<(), Self::Error>
-    {
-        // Refuse to write here...
-        Err(Error)
-    }
+            if read_result.is_err() {
+                return Err(hadris_iso::Error::from(read_result.err().unwrap()));
+            }
 
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        Ok(())
+            // Copy the relevant portion of the temporary buffer to the output buffer
+            buf[buf_offset..buf_offset + bytes_to_read].copy_from_slice(&temp_buf[block_offset..block_offset + bytes_to_read]);
+
+            // Update positions and counters
+            self.pos += bytes_to_read as u64;
+            total_read += bytes_to_read;
+            buf_offset += bytes_to_read;
+        }
+
+        Ok(total_read)
     }
 }
 
-/// An empty error type.
-#[derive(Debug)]
-struct Error;
-
-impl Display for Error {
-    fn fmt(&self, _f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        Ok(())
+impl Seek for Reader {
+    fn seek(&mut self,pos: hadris_iso::SeekFrom) -> hadris_iso::IoResult<u64> {
+        match pos {
+            hadris_iso::SeekFrom::Start(offset) => {
+                self.pos = offset;
+            }
+            hadris_iso::SeekFrom::End(offset) => {
+                let end_pos = (self.lastblk + 1) * self.blksize as u64;
+                self.pos = (end_pos as i64 + offset) as u64;
+            }
+            hadris_iso::SeekFrom::Current(offset) => {
+                self.pos = (self.pos as i64 + offset) as u64;
+            }
+        }
+        Ok(self.pos)
     }
 }
 
@@ -226,20 +233,30 @@ fn reader(handle: Handle) {
     // Read the file by using raw method
     let read_raw = || {
         // Init
-        let mut reader = Reader::new();
-        let root = mount(&mut reader, 0).unwrap();
+        let reader = Reader::new();
+        let image = IsoImage::open(reader).expect("Failed to open ISO image");
 
-        // Find file
-        let kernel = find_file(&mut reader, &root, "/proka-kernel").expect("Kernel not found");
-        let initprt = find_file(&mut reader, &root, "/initprt.img").expect("Initprt not found");
-        
-        // Define buffer
-        let kernel_buf = unsafe { core::slice::from_raw_parts_mut(0x200000 as *mut u8, kernel.size as usize) };
-        let initprt_buf = unsafe { core::slice::from_raw_parts_mut(0x3200000 as *mut u8,initprt.size as usize) };
+        // Get root directory
+        for entry in image.root_dir().iter(&image).entries() {
+            let entry = entry.expect("Something wrong while getting entry...");
+            match entry.display_name() {
+                Borrowed("PROKA-KERNEL;1") => {
+                    println!("[INFO] Found kernel file, reading...");
+                    let content = image.read_file(&entry).expect("Failed to read file...");
+                    let buf = unsafe { core::slice::from_raw_parts_mut(0x200000 as *mut u8, content.len()) };
+                    buf.copy_from_slice(&content);
+                }
 
-        // Read each file
-        read_file(&mut reader, &kernel, kernel_buf).expect("Failed to read kernel");
-        read_file(&mut reader, &initprt, initprt_buf).expect("Failed to read initprt")
+                Borrowed("INITPRT.IMG;1") => {
+                    println!("[INFO] Found initprt file, reading...");
+                    let content = image.read_file(&entry).expect("Failed to read file...");
+                    let buf = unsafe { core::slice::from_raw_parts_mut(0x3200000 as *mut u8, content.len()) };
+                    buf.copy_from_slice(&content);
+                }
+
+                _ => continue,
+            }
+        }
     };
 
     // Read the kernel from FAT32 partition, and put it to 0x200000

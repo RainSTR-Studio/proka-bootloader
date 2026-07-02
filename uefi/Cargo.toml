@@ -8,5 +8,4 @@ publish = false
 uefi = { version = "0.37", features = ["global_allocator", "panic_handler"] }
 proka-bootloader = { path = "../library", features = ["loader_main"] }
 x86_64 = { version = "0.15.4", default-features = false, features = ["instructions"] }
-gpt_disk_io = "0.16.2"
-iso9660-rs = "1.0.2"
+hadris-iso = { version = "1.2.0", default-features = false, features = ["alloc", "read", "sync"] }
