@@ -36,23 +36,25 @@ PDT *pdt_high = (PDT *)PDT_HIGH_PADDR;
 PDT *pdt_fb = (PDT *)PDT_FB_PADDR;
 
 // Stage3 main entry point
-void stage3_start(void) {
+void stage3_start(void)
+{
     // Invoke the load kernel and initprt in assembly
     loadkrnl();
     loadinit();
 
     // Get the VBE phys addr
-    uint32_t fb_phys = *(uint32_t*)(0x10000 + 0x28);
+    uint32_t fb_phys = *(uint32_t *)(0x10000 + 0x28);
 
     // Do parsing header
-    uint32_t magic = *(uint32_t*)0x200000;
-    if (magic != 0x504B4E4C) {
-    	error(1);
+    uint32_t magic = *(uint32_t *)0x200000;
+    if (magic != 0x504B4E4C)
+    {
+        error(1);
     }
 
-    uint16_t kmaj = *(uint16_t*)(0x200004);
-    uint16_t kmin = *(uint16_t*)(0x200006);
-    uint16_t kpat = *(uint16_t*)(0x200008);
+    uint16_t kmaj = *(uint16_t *)(0x200004);
+    uint16_t kmin = *(uint16_t *)(0x200006);
+    uint16_t kpat = *(uint16_t *)(0x200008);
 
     // Check is version mismatched
     if (kmaj != PROKA_VERSION_MAJ ||
@@ -66,9 +68,10 @@ void stage3_start(void) {
     RSDP *ptr = find_rsdp();
 
     // Check: is RSDP null
-    if (!ptr) {
+    if (!ptr)
+    {
         // No ACPI found...
-	error(3);
+        error(3);
     }
 
     // Save to 0x10100
@@ -81,7 +84,8 @@ void stage3_start(void) {
     prepare_sg4();
 }
 
-void init_paging(uint32_t fb_phys) {
+void init_paging(uint32_t fb_phys)
+{
     // Write the PML4 table
     pml4->entries[0].value = 0;
     pml4->entries[0].present = 1;
@@ -108,13 +112,15 @@ void init_paging(uint32_t fb_phys) {
     pdpt_low->entries[0].nx = 0;
     pdpt_low->entries[0].pfn = PDT_LOW_PADDR >> 12;
 
-    // Write the low PDT table (0x000000~0x1FFFFF)
-    pdt_low->entries[0].value = 0;
-    pdt_low->entries[0].present = 1;
-    pdt_low->entries[0].writable = 1;
-    pdt_low->entries[0].huge = 1;
-    pdt_low->entries[0].nx = 0;
-    pdt_low->entries[0].pfn = 0 >> 12; // PA=0x000000
+    // Write the low PDT table (0x000000~0x40000000)
+    for (uint64_t i = 0; i < 512; i++)
+    {
+        pdt_low->entries[i].present = 1;
+        pdt_low->entries[i].writable = 1;
+        pdt_low->entries[i].huge = 1;
+        pdt_low->entries[i].nx = 0;
+        pdt_low->entries[i].pfn = i * 0x200000 >> 12;
+    }
 
     // Write the high PDPT table
     pdpt_high->entries[0].value = 0;
@@ -122,16 +128,17 @@ void init_paging(uint32_t fb_phys) {
     pdpt_high->entries[0].writable = 1;
     pdpt_high->entries[0].nx = 0;
     pdpt_high->entries[0].pfn = PDT_HIGH_PADDR >> 12;
-   
-    pdpt_fb->entries[0].value = 0; 
+
+    pdpt_fb->entries[0].value = 0;
     pdpt_fb->entries[0].present = 1;
     pdpt_fb->entries[0].writable = 1;
     pdpt_fb->entries[0].nx = 0;
     pdpt_fb->entries[0].pfn = PDT_FB_PADDR >> 12;
-    
+
     // Write the high PDT table (128MiB, 64 entries)
-    for (uint64_t i = 0; i < 64; i++) {
-	pdt_high->entries[i].value = 0;
+    for (uint64_t i = 0; i < 64; i++)
+    {
+        pdt_high->entries[i].value = 0;
         pdt_high->entries[i].present = 1;
         pdt_high->entries[i].writable = 1;
         pdt_high->entries[i].huge = 1;
@@ -140,22 +147,26 @@ void init_paging(uint32_t fb_phys) {
     }
 
     // Map framebuffer address (16MB)
-    for (uint64_t i = 0; i < 8; i++) {
+    for (uint64_t i = 0; i < 8; i++)
+    {
         pdt_fb->entries[i].present = 1;
         pdt_fb->entries[i].writable = 1;
         pdt_fb->entries[i].huge = 1;
-	pdt_fb->entries[i].write_through = 1;
+        pdt_fb->entries[i].write_through = 1;
         pdt_fb->entries[i].pfn = (fb_phys + i * 0x200000) >> 12;
     }
 }
 
-RSDP *find_rsdp(void) {
+RSDP *find_rsdp(void)
+{
     // Scan EBDA
     uint16_t ebda_seg = *(uint16_t *)0x40E;
     uintptr_t ebda = (uintptr_t)ebda_seg << 4;
 
-    for (uintptr_t p = ebda; p < ebda + 1024; p += 16) {
-        if (sig_match((void *)p, RSDP_SIG, 8)) {
+    for (uintptr_t p = ebda; p < ebda + 1024; p += 16)
+    {
+        if (sig_match((void *)p, RSDP_SIG, 8))
+        {
             RSDP *cand = (RSDP *)p;
             if (rsdp_validate(cand))
                 return cand;
@@ -163,8 +174,10 @@ RSDP *find_rsdp(void) {
     }
 
     // Scan 0xE0000~0xFFFFF
-    for (uintptr_t p = 0xE0000; p <= 0xFFFFF; p += 16) {
-        if (sig_match((void *)p, RSDP_SIG, 8)) {
+    for (uintptr_t p = 0xE0000; p <= 0xFFFFF; p += 16)
+    {
+        if (sig_match((void *)p, RSDP_SIG, 8))
+        {
             RSDP *cand = (RSDP *)p;
             if (rsdp_validate(cand))
                 return cand;
