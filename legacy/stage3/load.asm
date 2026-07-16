@@ -4,7 +4,7 @@
 ; This file is the file loader of stage3, which will
 ; use real mode to read a file (initprt or kernel) and
 ; load it to memory. Two entry points:
-;   loadinit - loads INITPRT.IMG to 0x3200000
+;   loadinit - loads INITPRT.IMG to 0x800000
 ;   loadkrnl - loads PROKA-~1 to 0x200000
 
 %define BPB_CACHE_OFF 0xA000
@@ -24,7 +24,7 @@ loadinit:
   mov byte [is_first_read + 0x20000], 1
   mov byte [complete_read + 0x20000], 0
   mov byte [load_type + 0x20000], 1
-  mov dword [dest_current + 0x20000], 0x3200000
+  mov dword [dest_current + 0x20000], 0x800000
   mov word [file_name_ptr + 0x20000], initprt_filename
   mov word [iso_file_name_ptr + 0x20000], initprt_filename_iso
   mov word [error_msg_ptr + 0x20000], msg_initprt_not_found
