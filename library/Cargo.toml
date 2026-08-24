@@ -8,7 +8,7 @@ license = "GPL-3.0"
 readme = "../README.md"
 
 [dependencies]
-uefi = { version = "0.37", optional = true }
+uefi = { version = "0.39", optional = true }
 
 [features]
 default = []

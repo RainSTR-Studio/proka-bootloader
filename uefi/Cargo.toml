@@ -5,7 +5,14 @@ edition = "2024"
 publish = false
 
 [dependencies]
-uefi = { version = "0.37", features = ["global_allocator", "panic_handler"] }
+uefi = { version = "0.39", features = ["global_allocator", "panic_handler"] }
 proka-bootloader = { path = "../library", features = ["loader_main"] }
 x86_64 = { version = "0.15.4", default-features = false, features = ["instructions"] }
 hadris-iso = { version = "1.2.0", default-features = false, features = ["alloc", "read", "sync"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+debug = false
+strip = true
