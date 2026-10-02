@@ -6,7 +6,7 @@
  */
 #include "paging.h"
 #include "acpi.h"
-#include "../../build/version.h"
+#include "../../cache/version.h"
 #include <stdbool.h>
 #include <stdint.h>
 

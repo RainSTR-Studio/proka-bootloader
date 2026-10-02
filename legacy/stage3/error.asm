@@ -4,7 +4,7 @@
 ; This file is the kernel error handler, which will handle
 ; the errors during parsing header, or something else.
 
-%include "../../build/version.inc"
+%include "../../cache/version.inc"
 
 section .text
 ; ===== 32-bit area =====

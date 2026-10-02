@@ -202,6 +202,8 @@ def clean_all():
 
 def main():
     parser = argparse.ArgumentParser(description="Proka Bootloader build script")
+    # XXX: Compat from parent builder (proka-os)
+    parser.add_argument("--profile", default="release", choices=["release", "debug"])
     parser.add_argument("target", nargs="?", default="all", choices=["all", "legacy", "uefi", "clean"],
                         help="Build target: all (default), legacy, uefi, clean")
     args = parser.parse_args()
